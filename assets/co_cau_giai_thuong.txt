@@ -1,0 +1,7 @@
+Co cau giai thuong
+gom cac giai:
+- dac biet: 5/9 so tien (1 ve trung)
+- nhat: 1/9 so tien (1 ve trung)
+- nhi: 0.5/9 so tien (2 ve trung)
+- ba: 0.25/9 so tien (3 ve trung)
+- khuyen khich: 0.0625 / 9 (4 ve trung)
