@@ -9,6 +9,7 @@
     "solidity-coverage": "^0.8.4"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.6.1"
+    "@chainlink/contracts": "^0.6.1",
+    "hardhat-ethers": "^1.0.1"
   }
 }
