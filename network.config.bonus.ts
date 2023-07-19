@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-export const developmentChainIds = [1337, 31337];
 export const networkConfig = {
     1337: {
         name: "ganache_localhost" as string,
@@ -18,4 +17,3 @@ export const networkConfig = {
         LinkAddress: "0x779877A7B0D9E8603169DdbD7836e478b4624789" as string
     }
 }
-
