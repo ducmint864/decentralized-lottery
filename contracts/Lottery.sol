@@ -29,22 +29,22 @@ contract Lottery {
 
     // Modifiers
     modifier paidEnoughFee() {
-        if (msg.value < s_JOIN_FEE) revert NotEnoughFee();
+        if (msg.value < s_JOIN_FEE) revert Lottery__NotEnoughFee();
         _;
     }
 
     modifier fundedEnoughPrize() {
-        if (address(this).balance < s_PRIZE) revert NotEnoughFund();
+        if (address(this).balance < s_PRIZE) revert Lottery__NotEnoughFund();
         _;
     }
 
     modifier onlyOwner() {
-        if (msg.sender != s_OWNER) revert NotOwner();
+        if (msg.sender != s_OWNER) revert Lottery__NotOwner();
         _;
     }
 
     modifier onlyNonOwner() {
-        if (msg.sender == s_OWNER) revert NotAllowedToJoin();
+        if (msg.sender == s_OWNER) revert Lottery__NotAllowedToJoin();
         _;
     }
 
