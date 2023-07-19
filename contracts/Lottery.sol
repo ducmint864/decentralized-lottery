@@ -14,12 +14,12 @@ contract Lottery {
     /* State variables */
     uint256 public constant s_JOIN_FEE = 3000000000000000; // approx. 0.003 Eth = $5
     uint256 public constant s_PRIZE = 1000000000000000000000; // approx. 1000 Eth = $...
-    address immutable s_OWNER;
+    address public immutable s_OWNER;
     address[] private s_players;
     // mapping(uint8 => address) s_prizeRankingToWinner; /**prize ranking => winner's address */
     // VRFV2 related variables
-    VRFCoordinatorV2Mock s_mockContract;
-    uint64 internal s_subId;
+    VRFCoordinatorV2Mock private s_mockContract;
+    uint64 private s_subId;
 
     // Events
     event TicketBought(address buyer); // emits whenever someone joins the lottery
@@ -72,7 +72,7 @@ contract Lottery {
         s_mockContract.fundSubscription(s_subId, 100000000000000000000000);
     }
 
-    function join() public payable onlyNonOwner paidEnoughFee {
+    function join() external payable onlyNonOwner paidEnoughFee {
         s_players.push(msg.sender);
     }
 
@@ -83,6 +83,10 @@ contract Lottery {
 
     function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
+    }
+
+    function getMockContractAddress() external view returns (address) {
+        return address(s_mockContract);
     }
 
     function getNumberOfPlayers() public view returns (uint64) {
