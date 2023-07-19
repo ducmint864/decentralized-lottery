@@ -5,10 +5,10 @@ pragma solidity ^0.8.9;
 import "./mocks/VRFCoordinatorV2Mock.sol";
 
 // Errors
-error NotEnoughFee();
-error NotEnoughFund();
-error NotOwner();
-error NotAllowedToJoin();
+error Lottery__NotEnoughFee();
+error Lottery__NotEnoughFund();
+error Lottery__NotOwner();
+error Lottery__NotAllowedToJoin();
 
 contract Lottery {
     /* State variables */
