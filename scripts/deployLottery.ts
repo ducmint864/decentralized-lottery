@@ -2,7 +2,7 @@ import {ethers, network} from "hardhat";
 import { networkConfig } from "../network.config.bonus";
 import deployVRFCoordinatorV2Mock from "./deployVRFCoordinatorV2Mock"
 
-async function deployLottery() {
+async function deployLottery(ethAmount: string) {
     try {
         // Print network info
         const chainId: number = (network.config.chainId as number) ?? process.env.DEFAULT_CHAIN_ID;
@@ -21,7 +21,7 @@ async function deployLottery() {
 
         const LOTTERY_FACTORY = await ethers.getContractFactory("Lottery"); 
         const LOTTERY_CONTRACT = await LOTTERY_FACTORY.deploy(VRFCOORDINATOR_CONTRACT_ADDRESS, {
-            value : ethers.parseEther("1000")
+            value : ethers.parseEther(ethAmount)
         }); // deploys contract with initial balance of 10000 Eth
         const LOTTERY_CONTRACT_ADDRESS = await LOTTERY_CONTRACT.getAddress();
         console.log(`Lottery contract has been deployed to address ${LOTTERY_CONTRACT_ADDRESS}`);
@@ -34,7 +34,7 @@ async function deployLottery() {
 
 // Invoke deployLottery()
 (async () => {
-    await deployLottery();
+    await deployLottery("1000");
 })();
 
 export default deployLottery;
