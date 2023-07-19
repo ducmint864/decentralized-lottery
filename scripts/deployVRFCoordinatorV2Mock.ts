@@ -1,4 +1,4 @@
-import {ethers} from "hardhat";
+import { ethers } from "hardhat";
 
 async function deployVRFCoordinatorV2Mock() {
     try {
@@ -13,4 +13,4 @@ async function deployVRFCoordinatorV2Mock() {
     }
 }
 
-export default  deployVRFCoordinatorV2Mock;
+export default deployVRFCoordinatorV2Mock;
