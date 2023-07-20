@@ -5,21 +5,24 @@ pragma solidity ^0.8.9;
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 
 // Errors
 error Lottery__NotEnoughFee();
 error Lottery__NotEnoughFund();
-error Lottery__NotOwner();
-error Lottery__NotAllowedToJoin();
+error Lottery__NotAllowOwnerToJoin();
+error Lottery__NotEnoughPlayers(); // num. of players >= 5 (Developer should memorize this to avoid creating more state variables -> avoid wasting gas)
+error Lottery__TooManyPlayers();   // num. of playres <= 20
 error Lottery__TransferFailed();
 
-contract Lottery is VRFConsumerBaseV2 {
+contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /* State variables */
     // Lottery variables
     uint256 public immutable i_prize; // approx. 1000 Eth = $... Old value: 1000000000000000000000
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address public immutable i_owner;
     address[] private s_players;
+    uint128 s_latestRoundNumber = 0;
 
     // Chainlink VRF variables
     VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2;
@@ -29,31 +32,26 @@ contract Lottery is VRFConsumerBaseV2 {
     uint16 private constant MINIMUM_REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 3;
 
+    // Chainlink UpKeep variables
+    uint256 private s_lastTimeStamp;
+    uint256 private immutable i_upKeepInterval;
+
     // Events
+    event LotteryFunded(address funder, uint256 amount); // emits whenever someone funds money into the lottery
     event PlayerJoined(address player); // emits whenever someone joins the lottery
     event PrizeDismissed(uint8 prizeRanking); // emits if a prize has no winner
     event PrizeWon(address winner, uint8 prizeRanking); // emits whenever someone wins a prize
     event PrizeAwarded(address winner, uint8 prizeRanking, uint256 amount); // emits whenever someone gets awarded for the prize they had won
-    event ContractFunded(address funder, uint256 amount); // emits whenever someone funds money into the lottery
+    event LotteryRoundStarted(uint128 roundNumber, uint256 timestamp);
+    event LotteryRoundEnded(uint128 roundNumber, uint256 timestamp);
 
     // Modifiers
-    modifier paidEnoughFee() {
+    modifier allowedToJoin() {
+        if (msg.sender == i_owner) revert Lottery__NotAllowOwnerToJoin();
         if (msg.value < i_joinFee) revert Lottery__NotEnoughFee();
-        _;
-    }
-
-    modifier fundedEnoughPrize() {
         if (address(this).balance < i_prize) revert Lottery__NotEnoughFund();
-        _;
-    }
-
-    modifier onlyOwner() {
-        if (msg.sender != i_owner) revert Lottery__NotOwner();
-        _;
-    }
-
-    modifier onlyNonOwner() {
-        if (msg.sender == i_owner) revert Lottery__NotAllowedToJoin();
+        if (getNumberOfPlayers() > 20) revert Lottery__TooManyPlayers();
+        if (getNumberOfPlayers() < 5) revert Lottery__NotEnoughPlayers();
         _;
     }
 
@@ -71,38 +69,88 @@ contract Lottery is VRFConsumerBaseV2 {
         address _vrfCoordinatorV2Address,
         bytes32 _gasLane,
         uint64 _subscriptionId,
-        uint32 _callbackGasLimit
-    ) VRFConsumerBaseV2(_vrfCoordinatorV2Address) payable {
-        emit ContractFunded(msg.sender, msg.value);
+        uint32 _callbackGasLimit,
+        uint256 _upKeepInterval
+    ) payable VRFConsumerBaseV2(_vrfCoordinatorV2Address) {
+        emit LotteryRoundStarted(s_latestRoundNumber, block.timestamp);
         i_owner = msg.sender;
         i_prize = _prize;
         i_joinFee = _joinFee;
         i_gasLane = _gasLane;
         i_subscriptionId = _subscriptionId;
         i_callbackGasLimit = _callbackGasLimit;
+        i_upKeepInterval = _upKeepInterval;
+        s_lastTimeStamp = block.timestamp;
 
         /** Steps to get setup VRFv2CoordinatorMock */
         // 1. Initialize an instance of deployed VRFCoordinatorV2Mock contract
-        i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(_vrfCoordinatorV2Address);
+        i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(
+            _vrfCoordinatorV2Address
+        );
         // 2. Add consumer to subscription. Assuming that you have already subscribed to Chainlikn VRF and you have a subscription ID
         i_vrfCoordinatorV2.addConsumer(i_subscriptionId, address(this));
     }
 
-    function join() external payable onlyNonOwner paidEnoughFee {
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        external
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
+        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
+        bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
+        bool hasTooManyPlayers = getNumberOfPlayers() > 20;
+        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers);
+        // We don't use the checkData in this example. The checkData is defined when the Upkeep was registered.
+        return (upKeepNeeded, hex"00");
+    }
+
+    function performUpkeep(bytes calldata /* performData */) external override {
+        //We highly recommend re-validating the upkeep in the performUpkeep function
+        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
+        bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
+        bool hasTooManyPlayers = getNumberOfPlayers() > 20;
+        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers);
+
+        if (upKeepNeeded) {
+            s_lastTimeStamp = block.timestamp;
+            uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
+                i_gasLane,
+                i_subscriptionId,
+                MINIMUM_REQUEST_CONFIRMATIONS,
+                i_callbackGasLimit,
+                NUM_WORDS
+            );
+            emit LotteryRoundEnded(s_latestRoundNumber, block.timestamp);
+        }
+        // We don't use the performData in this example. The performData is generated by the Automation Node's call to your checkUpkeep function
+    }
+
+    function join() external payable allowedToJoin {
         s_players.push(msg.sender);
     }
 
     /**Note: anyone can voluntarily fund money into the lottery */
     function fund() public payable {
-        emit ContractFunded(msg.sender, msg.value);
+        emit LotteryFunded(msg.sender, msg.value);
     }
 
     function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
     }
 
-    function getNumberOfPlayers() public view returns (uint64) {
-        return uint64(s_players.length);
+    function getMaximumNumberOfPlayers() external view returns (uint8) {
+        return 20;
+    }
+
+    function getMinimumNumberOfPlayers() external view returns (uint8) {
+        return 5;
+    }
+
+    function getNumberOfPlayers() public view returns (uint8) {
+        return uint8(s_players.length);
     }
 
     // function getRandomWords(
