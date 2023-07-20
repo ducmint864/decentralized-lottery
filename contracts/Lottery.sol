@@ -9,6 +9,7 @@ error Lottery__NotEnoughFee();
 error Lottery__NotEnoughFund();
 error Lottery__NotOwner();
 error Lottery__NotAllowedToJoin();
+error Lottery__TransferFailed();
 
 contract Lottery {
     /* State variables */
@@ -161,10 +162,8 @@ contract Lottery {
             address winner = s_players[indexOfWinner];
             emit PrizeWon(winner, prizeRanking);
             (bool callSuccess, ) = payable(winner).call{value: amount}("");
-            require(
-                callSuccess,
-                "Something went wrong! Failed to send award to winner."
-            );
+            if (!callSuccess) 
+                revert Lottery__TransferFailed();
             emit PrizeAwarded(winner, prizeRanking, amount);
         }
     }
