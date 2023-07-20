@@ -5,6 +5,7 @@ coverage.json
 typechain
 typechain-types
 todo.txt
+scripts/test.ts
 
 # Hardhat files
 cache
