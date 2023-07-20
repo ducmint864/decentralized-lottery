@@ -13,7 +13,7 @@ error Lottery__NotAllowedToJoin();
 contract Lottery {
     /* State variables */
     uint256 public constant s_JOIN_FEE = 3000000000000000; // approx. 0.003 Eth = $5
-    uint256 public constant s_PRIZE = 10000000000000000000; // approx. 1000 Eth = $...
+    uint256 public constant s_PRIZE = 1000000000000000000000; // approx. 1000 Eth = $...
     address public immutable s_OWNER;
     address[] private s_players;
     // mapping(uint8 => address) s_prizeRankingToWinner; /**prize ranking => winner's address */
