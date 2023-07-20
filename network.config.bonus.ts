@@ -1,7 +1,9 @@
 import "dotenv/config";
+import {network} from "hardhat";
+import config  from "./hardhat.config"
 
 export const networkConfig = {
-    5777: {
+    1337: {
         name: "ganache_localhost" as string,
         VRFv2CoordinatorAddress: "" as string,
         LinkAddress: ""  as string
