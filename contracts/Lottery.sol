@@ -141,11 +141,11 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return s_players[index];
     }
 
-    function getMaximumNumberOfPlayers() external view returns (uint8) {
+    function getMaximumNumberOfPlayers() external pure returns (uint8) {
         return 20;
     }
 
-    function getMinimumNumberOfPlayers() external view returns (uint8) {
+    function getMinimumNumberOfPlayers() external pure returns (uint8) {
         return 5;
     }
 
@@ -286,7 +286,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         }
     }
 
-    /**This is a call-back function: when the 3 random words are generated, go find and award the winner*/
+    /**This is a mandatory call-back function: when the 3 random words are generated, go find and award the winner*/
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] memory randomWords
