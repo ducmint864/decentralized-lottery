@@ -26,8 +26,8 @@ const config: HardhatUserConfig = {
         },
         ganache_localhost: {
             url: process.env.GANACHE_LOCALHOST_RPC_URL,
-            chainId: 1337,
-            accounts: ["0xb4da86fe60e59ae527c76f1be8e5171c6d4b25f81dc3bded8f239ea6cf028ac4"],
+            chainId: 5777,
+            accounts: ["0xfeb4285878f4b43556fabc6ade58b99e3ba91cbeeb7ada47e3f2ebab38adcbfa"],
         }
     },
     etherscan: {

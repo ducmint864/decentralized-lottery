@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 export const networkConfig = {
-    1337: {
+    5777: {
         name: "ganache_localhost" as string,
         VRFv2CoordinatorAddress: "" as string,
         LinkAddress: ""  as string
