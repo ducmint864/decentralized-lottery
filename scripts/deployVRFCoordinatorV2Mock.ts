@@ -12,7 +12,7 @@ async function deployVRFCoordinatorV2Mock() {
         
     } catch (err: any) {
         console.log(err);
-        throw new Error("->Failed to deploy VRFCoordinatorV2Mock contract." + err);
+        throw new Error("->Failed to deploy VRFCoordinatorV2Mock contract.");
     }
 }
 
