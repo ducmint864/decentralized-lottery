@@ -35,11 +35,11 @@ async function deployLottery(ethAmount: string) {
     }
 }
 
-// // Invoke deployLottery()
-// (async () => {
-//     await deployLottery("1").then().catch((err: Error) => {
-//         console.log(err.message);
-//     });
-// })();
+// Invoke deployLottery()
+(async () => {
+    await deployLottery("1").then().catch((err: Error) => {
+        console.log(err.message);
+    });
+})();
 
 export default deployLottery;
