@@ -95,7 +95,7 @@ contract Lottery {
 
     function getRandomWords(
         uint32 numberOfRandomWords
-    ) private returns (uint256[] memory) {
+    ) public onlyOwner returns (uint256[] memory) {
         uint256 foo = 69;
         uint256 requestId = s_mockContract.requestRandomWords(
             bytes32(foo),
@@ -114,7 +114,7 @@ contract Lottery {
     }
 
     /** 3 words are combined into an index of winner */
-    function getIndexOfWinner() private returns (uint8) {
+    function getIndexOfWinner() public onlyOwner returns (uint256) {
         uint256[] memory randomWords = getRandomWords(3);
         uint8 digitCount1 = 0;
         uint8 digitCount2 = 0;
@@ -140,21 +140,11 @@ contract Lottery {
         }
 
         return
-            uint8(
-                digitSum /
-                    (
-                        digitCount1 > digitCount2
-                            ? (
-                                digitCount1 > digitCount3
-                                    ? digitCount1
-                                    : digitCount3
-                            )
-                            : (
-                                digitCount2 > digitCount3
-                                    ? digitCount2
-                                    : digitCount3
-                            )
-                    )
+            digitSum /
+            (
+                digitCount1 > digitCount2
+                    ? (digitCount1 > digitCount3 ? digitCount1 : digitCount3)
+                    : (digitCount2 > digitCount3 ? digitCount2 : digitCount3)
             );
     }
 
@@ -162,10 +152,10 @@ contract Lottery {
         uint8 numberOfWinners,
         uint8 prizeRanking,
         uint256 amount
-    ) private {
+    ) public onlyOwner {
         for (uint8 i = 0; i < numberOfWinners; i++) {
             uint64 numberOfPlayers = getNumberOfPlayers();
-            uint8 indexOfWinner = getIndexOfWinner();
+            uint256 indexOfWinner = getIndexOfWinner();
             if (indexOfWinner >= numberOfPlayers) continue;
 
             address winner = s_players[indexOfWinner];
