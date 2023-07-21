@@ -46,6 +46,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     event LotteryRoundStarted(uint128 roundNumber, uint256 timestamp);
     event LotteryRoundEnded(uint128 roundNumber, uint256 timestamp);
     event UpKeepTriggered(uint128 roundNumber, uint256 timestamp);
+    event ReturnedRandomness(uint256[] randomWords);
 
     // Modifiers
     modifier allowedToJoin() {
@@ -305,6 +306,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 requestId,
         uint256[] memory randomWords
     ) internal override {
+        emit ReturnedRandomness(randomWords);
         // Reduce the the arbitary uint256 values of randomWords into a useable value
         uint8 digitsCount = countDigits(getNumberOfPlayers());
         digitsCount--;
