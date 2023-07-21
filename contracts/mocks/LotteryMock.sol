@@ -99,6 +99,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_vrfCoordinatorV2Mock.addConsumer(i_subscriptionId, address(this));
     }
 
+    /**In a mock contract, we don't need use this function because it was meant to be called by Chainlink Automation Service. But they don't exist on a local blockchain ¯\_(ツ)_/¯*/
     function checkUpkeep(
         bytes calldata /* checkData */
     )
