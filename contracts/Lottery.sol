@@ -23,7 +23,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address public immutable i_owner;
     address[] private s_players;
-    uint128 s_latestRoundNumber = 0;
+    uint128 private s_latestRoundNumber = 0;
 
     // Chainlink VRF variables
     VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2;
@@ -157,6 +157,10 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function getMinimumNumberOfPlayers() external pure returns (uint8) {
         return 5;
+    }
+
+    function getRoundNumber() external view returns (uint128) {
+        return s_latestRoundNumber;
     }
 
     function getNumberOfPlayers() public view returns (uint8) {
@@ -316,9 +320,10 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         // Find and award the winner of 3rd prize
         findAndAwardWinner(3, players, randomWords[2], (i_prize * 1) / 10);
 
-        // Clean up to prepare for new round
+        // Clean up and prepare for new round
         s_players = new address[](0);
         s_lastTimeStamp = block.timestamp;
         emit LotteryRoundEnded(s_latestRoundNumber, s_lastTimeStamp);
+        s_latestRoundNumber++;
     }
 }
