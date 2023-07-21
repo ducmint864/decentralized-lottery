@@ -11,9 +11,10 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 error Lottery__NotEnoughFee();
 error Lottery__NotEnoughFund();
 error Lottery__NotAllowOwnerToJoin();
-error Lottery__NotEnoughPlayers(); // num. of players >= 5 (Developer should memorize this to avoid creating more state variables -> avoid wasting gas)
-error Lottery__TooManyPlayers();   // num. of playres <= 20
+error Lottery__NotEnoughPlayers(); // num. of players >= 5
+error Lottery__TooManyPlayers(); // num. of playres <= 20
 error Lottery__TransferFailed();
+error Lottery__NotEnoughTimeHasPassed();
 
 contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /* State variables */
@@ -44,14 +45,14 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     event PrizeAwarded(address winner, uint8 prizeRanking, uint256 amount); // emits whenever someone gets awarded for the prize they had won
     event LotteryRoundStarted(uint128 roundNumber, uint256 timestamp);
     event LotteryRoundEnded(uint128 roundNumber, uint256 timestamp);
+    event UpKeepTriggered(uint128 roundNumber, uint256 timestamp);
 
     // Modifiers
     modifier allowedToJoin() {
         if (msg.sender == i_owner) revert Lottery__NotAllowOwnerToJoin();
-        if (msg.value < i_joinFee) revert Lottery__NotEnoughFee();
+        if (msg.value < i_joinFee) revert Lottery__NotEnoughFee(); // Note: To ensure fairness for the players, no players is allowed to join until the owner of this contract has funded enough i_prize amount;
         if (address(this).balance < i_prize) revert Lottery__NotEnoughFund();
         if (getNumberOfPlayers() > 20) revert Lottery__TooManyPlayers();
-        if (getNumberOfPlayers() < 5) revert Lottery__NotEnoughPlayers();
         _;
     }
 
@@ -62,7 +63,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         fund();
     }
 
-    /**Note: On start-up, this contract requires the owner/operator of the contract itself to fund an amount equal to larger than s_Prize in order to provoke the integrity of the smart contract*/
+    /**Note: On deployment, the contract can have balance = 0. But it won't allow any player to join untill it has been funded with i_prize amount*/
     constructor(
         uint256 _prize,
         uint256 _joinFee,
@@ -72,7 +73,8 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint32 _callbackGasLimit,
         uint256 _upKeepInterval
     ) payable VRFConsumerBaseV2(_vrfCoordinatorV2Address) {
-        emit LotteryRoundStarted(s_latestRoundNumber, block.timestamp);
+        s_lastTimeStamp = block.timestamp;
+        emit LotteryRoundStarted(s_latestRoundNumber, s_lastTimeStamp);
         i_owner = msg.sender;
         i_prize = _prize;
         i_joinFee = _joinFee;
@@ -80,15 +82,12 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_subscriptionId = _subscriptionId;
         i_callbackGasLimit = _callbackGasLimit;
         i_upKeepInterval = _upKeepInterval;
-        s_lastTimeStamp = block.timestamp;
 
-        /** Steps to get setup VRFv2CoordinatorMock */
-        // 1. Initialize an instance of deployed VRFCoordinatorV2Mock contract
+        /** Initialize an instance of deployed VRFCoordinatorV2Mock contract */
+        // 1.
         i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(
             _vrfCoordinatorV2Address
         );
-        // 2. Add consumer to subscription. Assuming that you have already subscribed to Chainlikn VRF and you have a subscription ID
-        i_vrfCoordinatorV2.addConsumer(i_subscriptionId, address(this));
     }
 
     function checkUpkeep(
@@ -102,29 +101,38 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
         bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
         bool hasTooManyPlayers = getNumberOfPlayers() > 20;
-        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers);
+        bool hasEnoughFund = address(this).balance >= i_prize;
+        bool upKeepNeeded = (enoughTimeHasPassed &&
+            hasEnoughPlayers &&
+            !hasTooManyPlayers &&
+            hasEnoughFund);
+
         // We don't use the checkData in this example. The checkData is defined when the Upkeep was registered.
-        return (upKeepNeeded, hex"00");
+        return (upKeepNeeded, abi.encodePacked(upKeepNeeded));
     }
 
     function performUpkeep(bytes calldata /* performData */) external override {
         //We highly recommend re-validating the upkeep in the performUpkeep function
         bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
+        if (!enoughTimeHasPassed) revert Lottery__NotEnoughTimeHasPassed();
         bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
+        if (!hasEnoughPlayers) revert Lottery__NotEnoughPlayers();
         bool hasTooManyPlayers = getNumberOfPlayers() > 20;
-        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers);
+        if (hasTooManyPlayers) revert Lottery__TooManyPlayers();
+        bool hasEnoughFund = address(this).balance >= i_prize;
+        if (!hasEnoughFund) revert Lottery__NotEnoughFund();
+        // bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers && hasEnoughFund);
 
-        if (upKeepNeeded) {
-            s_lastTimeStamp = block.timestamp;
-            uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
-                i_gasLane,
-                i_subscriptionId,
-                MINIMUM_REQUEST_CONFIRMATIONS,
-                i_callbackGasLimit,
-                NUM_WORDS
-            );
-            emit LotteryRoundEnded(s_latestRoundNumber, block.timestamp);
-        }
+        // if (upKeepNeeded) {
+        emit UpKeepTriggered(s_latestRoundNumber, block.timestamp);
+        uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
+            i_gasLane,
+            i_subscriptionId,
+            MINIMUM_REQUEST_CONFIRMATIONS,
+            i_callbackGasLimit,
+            NUM_WORDS
+        );
+        // }
         // We don't use the performData in this example. The performData is generated by the Automation Node's call to your checkUpkeep function
     }
 
@@ -305,5 +313,10 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
         // Find and award the winner of 3rd prize
         findAndAwardWinner(3, players, randomWords[2], (i_prize * 1) / 10);
+
+        // Clean up to prepare for new round
+        s_players = new address[](0);
+        s_lastTimeStamp = block.timestamp;
+        emit LotteryRoundEnded(s_latestRoundNumber, s_lastTimeStamp);
     }
 }
