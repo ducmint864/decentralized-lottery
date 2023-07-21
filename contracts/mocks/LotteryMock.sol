@@ -22,7 +22,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     address private immutable i_owner;
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address[] private s_players;
-    uint128 private s_latestRoundNumber = 0;
+    uint128 private s_latestRoundNumber = 1;
     uint256 public s_requestId;
 
     // Chainlink VRF variables

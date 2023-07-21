@@ -23,7 +23,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address public immutable i_owner;
     address[] private s_players;
-    uint128 private s_latestRoundNumber = 0;
+    uint128 private s_latestRoundNumber = 1;
 
     // Chainlink VRF variables
     VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2;
