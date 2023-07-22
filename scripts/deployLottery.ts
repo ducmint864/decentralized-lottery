@@ -4,7 +4,7 @@ import { developmentChainIds } from "../network.config.bonus";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
 
-async function deployLottery(ethAmount: string = "10", callbackGaslimit: bigint = 2500000n, upKeepInterval: bigint = 60n) {
+async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint = 2500000n, upKeepInterval: bigint = 60n) {
     try {
 
         /**Variables */
@@ -43,7 +43,7 @@ async function deployLottery(ethAmount: string = "10", callbackGaslimit: bigint 
         lotteryFactory = await ethers.getContractFactory(isDevelopmentChain ? "LotteryMock" : "Lottery");
         lottery = await lotteryFactory.deploy(
             // Constructor's params
-            ethers.parseEther(ethAmount), // i_prize
+            ethers.parseEther(ethPrize), // i_prize
             BigInt(3000000000000000),     // i_joinFee
             vrfCoordinatorV2Address,      // i_vrfCoordinatorV2Address
             VRF_GAS_LANE,                 // i_gasLane
@@ -53,7 +53,7 @@ async function deployLottery(ethAmount: string = "10", callbackGaslimit: bigint 
 
             // Overrides
             {
-                value: ethers.parseEther(ethAmount)
+                value: ethers.parseEther(ethPrize + 1)
             })
         await lottery.waitForDeployment();
         lotteryAddress = await lottery.getAddress();
@@ -70,7 +70,7 @@ async function deployLottery(ethAmount: string = "10", callbackGaslimit: bigint 
     }
 }
 
-// Invoke deployLottery()
+// Invoke deployLottery() with default parameters
 deployLottery().catch((err: any) => {
     console.log(err);
 })

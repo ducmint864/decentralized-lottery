@@ -23,7 +23,9 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address public immutable i_owner;
     address[] private s_players;
-    uint128 private s_latestRoundNumber = 1;
+    uint128 private s_roundNumber = 1;
+    uint8 private constant MINIMUM_NUMBER_OF_PLAYERS = 10;
+    uint8 private constant MAXIMUM_NUMBER_OF_PLAYERS = 30;
 
     // Chainlink VRF variables
     VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2;
@@ -37,7 +39,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint256 private s_lastTimeStamp;
     uint256 private immutable i_upKeepInterval;
 
-    // Events
+    /**Events */
     event LotteryFunded(address funder, uint256 amount); // emits whenever someone funds money into the lottery
     event PlayerJoined(address player); // emits whenever someone joins the lottery
     event PrizeDismissed(uint8 prizeRanking); // emits if a prize has no winner
@@ -46,18 +48,32 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     event LotteryRoundStarted(uint128 roundNumber, uint256 timestamp);
     event LotteryRoundEnded(uint128 roundNumber, uint256 timestamp);
     event UpKeepTriggered(uint128 roundNumber, uint256 timestamp);
-    event ReturnedRandomness(uint256[] randomWords);
+    event RandomWordsFulfilled(uint256 requestId, uint256[] randomWords);
+    event RandomWordsRequested(
+        bytes32 gasLane,
+        uint64 subscriptionId,
+        uint16 MINIMUM_REQUEST_CONFIRMATIONS,
+        uint32 callbackGasLimit,
+        uint32 NUM_WORDS
+    );
 
-    // Modifiers
+    /**Modifiers*/
     modifier allowedToJoin() {
         if (msg.sender == i_owner) revert Lottery__NotAllowOwnerToJoin();
         if (msg.value < i_joinFee) revert Lottery__NotEnoughFee(); // Note: To ensure fairness for the players, no players is allowed to join until the owner of this contract has funded enough i_prize amount;
-        if (address(this).balance < i_prize) revert Lottery__NotEnoughFund();
-        if (getNumberOfPlayers() > 20) revert Lottery__TooManyPlayers();
+        if (address(this).balance < (i_prize + 1 ether))
+            revert Lottery__NotEnoughFund(); // Note: Why "+ 1 ether"? Because the contract enforce the fund to exceed i_prize by 1 Ether in to compensate for the txFees when transferring Eth to the winners. Ưhen the Lottery's closed, the remaining balance will be refunded to the owner.
+        if (getNumberOfPlayers() >= MAXIMUM_NUMBER_OF_PLAYERS)
+            revert Lottery__TooManyPlayers();
         _;
     }
 
-    // Functions
+    modifier onlyOwner() {
+        require(msg.sender == i_owner);
+        _;
+    }
+
+    /**Functions */
     fallback() external payable {
         fund();
     }
@@ -77,7 +93,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 _upKeepInterval
     ) payable VRFConsumerBaseV2(_vrfCoordinatorV2Address) {
         s_lastTimeStamp = block.timestamp;
-        emit LotteryRoundStarted(s_latestRoundNumber, s_lastTimeStamp);
+        emit LotteryRoundStarted(s_roundNumber, s_lastTimeStamp);
         i_owner = msg.sender;
         i_prize = _prize;
         i_joinFee = _joinFee;
@@ -86,8 +102,6 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_callbackGasLimit = _callbackGasLimit;
         i_upKeepInterval = _upKeepInterval;
 
-        /** Initialize an instance of deployed VRFCoordinatorV2Mock contract */
-        // 1.
         i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(
             _vrfCoordinatorV2Address
         );
@@ -101,13 +115,12 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         override
         returns (bool upkeepNeeded, bytes memory /* performData */)
     {
-        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
-        bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
-        bool hasTooManyPlayers = getNumberOfPlayers() > 20;
-        bool hasEnoughFund = address(this).balance >= i_prize;
+        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) >
+            i_upKeepInterval;
+        bool hasEnoughPlayers = getNumberOfPlayers() >= 10;
+        bool hasEnoughFund = address(this).balance >= (i_prize + 1 ether);
         bool upKeepNeeded = (enoughTimeHasPassed &&
             hasEnoughPlayers &&
-            !hasTooManyPlayers &&
             hasEnoughFund);
 
         // We don't use the checkData in this example. The checkData is defined when the Upkeep was registered.
@@ -116,18 +129,18 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function performUpkeep(bytes calldata /* performData */) external override {
         //We highly recommend re-validating the upkeep in the performUpkeep function
-        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) > i_upKeepInterval;
+        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) >
+            i_upKeepInterval;
         if (!enoughTimeHasPassed) revert Lottery__NotEnoughTimeHasPassed();
-        bool hasEnoughPlayers = getNumberOfPlayers() >= 5;
+
+        bool hasEnoughPlayers = getNumberOfPlayers() >=
+            MINIMUM_NUMBER_OF_PLAYERS;
         if (!hasEnoughPlayers) revert Lottery__NotEnoughPlayers();
-        bool hasTooManyPlayers = getNumberOfPlayers() > 20;
-        if (hasTooManyPlayers) revert Lottery__TooManyPlayers();
+
         bool hasEnoughFund = address(this).balance >= i_prize;
         if (!hasEnoughFund) revert Lottery__NotEnoughFund();
-        // bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers && !hasTooManyPlayers && hasEnoughFund);
 
-        // if (upKeepNeeded) {
-        emit UpKeepTriggered(s_latestRoundNumber, block.timestamp);
+        emit UpKeepTriggered(s_roundNumber, block.timestamp);
         uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
@@ -135,7 +148,6 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
             i_callbackGasLimit,
             NUM_WORDS
         );
-        // }
         // We don't use the performData in this example. The performData is generated by the Automation Node's call to your checkUpkeep function
     }
 
@@ -143,8 +155,8 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_players.push(msg.sender);
     }
 
-    /**Note: anyone can voluntarily fund money into the lottery */
     function fund() public payable {
+        //Note: anyone can voluntarily fund money into the lottery
         emit LotteryFunded(msg.sender, msg.value);
     }
 
@@ -153,126 +165,80 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     function getMaximumNumberOfPlayers() external pure returns (uint8) {
-        return 20;
+        return MAXIMUM_NUMBER_OF_PLAYERS;
     }
 
     function getMinimumNumberOfPlayers() external pure returns (uint8) {
-        return 5;
+        return MINIMUM_NUMBER_OF_PLAYERS;
     }
 
     function getRoundNumber() external view returns (uint128) {
-        return s_latestRoundNumber;
+        return s_roundNumber;
     }
 
     function getNumberOfPlayers() public view returns (uint8) {
         return uint8(s_players.length);
     }
 
-    // function getRandomWords(
-    //     uint32 numberOfRandomWords
-    // ) public onlyOwner returns (uint256[] memory) {
-    //     uint256 foo = 69;
-    //     uint256 requestId = s_mockContract.requestRandomWords(
-    //         bytes32(foo),
-    //         s_subId,
-    //         1,
-    //         100000000,
-    //         numberOfRandomWords
-    //     );
-    //     uint256[] memory randomWords;
-    //     randomWords = s_mockContract.fulfillRandomWordsWithOverride(
-    //         requestId,
-    //         address(this),
-    //         randomWords
-    //     );
-    //     return randomWords;
-    // }
+    function getOwner() external view returns (address) {
+        return i_owner;
+    }
 
-    /** 3 words are combined into an index of winner */
-    // function getIndexOfWinner() public onlyOwner returns (uint256) {
-    //     uint256[] memory randomWords = getRandomWords(3);
-    //     uint8 digitCount1 = 0;
-    //     uint8 digitCount2 = 0;
-    //     uint8 digitCount3 = 0;
-    //     uint256 digitSum = 0;
+    function getPrize() external view returns (uint256) {
+        return i_prize;
+    }
 
-    //     while (randomWords[0] > 0) {
-    //         digitCount1++;
-    //         digitSum += (randomWords[0] % 10);
-    //         randomWords[0] /= 10;
-    //     }
+    function getVRFCoordinatorV2()
+        external
+        view
+        returns (VRFCoordinatorV2Interface)
+    {
+        return i_vrfCoordinatorV2;
+    }
 
-    //     while (randomWords[1] > 0) {
-    //         digitCount2++;
-    //         digitSum += (randomWords[1] % 10);
-    //         randomWords[1] /= 10;
-    //     }
+    function getSubscriptionId() external view returns (uint64) {
+        return i_subscriptionId;
+    }
 
-    //     while (randomWords[2] > 0) {
-    //         digitCount3++;
-    //         digitSum += (randomWords[2] % 10);
-    //         randomWords[2] /= 10;
-    //     }
+    function getGaslane() external view returns (bytes32) {
+        return i_gasLane;
+    }
 
-    //     return
-    //         digitSum /
-    //         (
-    //             digitCount1 > digitCount2
-    //                 ? (digitCount1 > digitCount3 ? digitCount1 : digitCount3)
-    //                 : (digitCount2 > digitCount3 ? digitCount2 : digitCount3)
-    //         );
-    // }
+    function getCallbackGasLimit() external view returns (uint32) {
+        return i_callbackGasLimit;
+    }
 
-    // function findAndAwardWinners(
-    //     uint8 numberOfWinners,
-    //     uint8 prizeRanking,
-    //     uint256 amount
-    // ) public onlyOwner {
-    //     for (uint8 i = 0; i < numberOfWinners; i++) {
-    //         uint64 numberOfPlayers = getNumberOfPlayers();
-    //         uint256 indexOfWinner = getIndexOfWinner();
-    //         if (indexOfWinner >= numberOfPlayers) continue;
+    function getNumberOfWords() external pure returns (uint32) {
+        return NUM_WORDS;
+    }
 
-    //         address winner = s_players[indexOfWinner];
-    //         emit PrizeWon(winner, prizeRanking);
-    //         (bool callSuccess, ) = payable(winner).call{value: amount}("");
-    //         if (!callSuccess) revert Lottery__TransferFailed();
-    //         emit PrizeAwarded(winner, prizeRanking, amount);
-    //     }
-    // }
+    function getMinumRequestConfirmations() external pure returns (uint16) {
+        return MINIMUM_REQUEST_CONFIRMATIONS;
+    }
 
-    // /** This functions gets called automatically at the end of every round */
-    // /** Each round, there are multiple winners (see $project-root/assets/co_cau_giai_thuong.txt)*/
-    // function executeAtEndOfRound() public onlyOwner fundedEnoughPrize {
-    //     uint256 prize = i_prize;
-    //     // Tim va trao thuong 1 giai dac biet
-    //     findAndAwardWinners(1, 0, (prize * 5) / 9);
-    //     // Tim va trao thuong 1 giai nhat
-    //     findAndAwardWinners(1, 1, (prize * 1) / 9);
-    //     // Tim va trao thuong 2 giai nhi
-    //     findAndAwardWinners(2, 2, (prize * 1) / 18);
-    //     // Tim va trao thuong 3 giai ba
-    //     findAndAwardWinners(3, 3, (prize * 1) / 36);
-    //     // Tim va trao thuong 4 giai khuyen khich
-    //     findAndAwardWinners(4, 4, (prize * 1) / 144);
-    //     // clean-up for upcoming round
-    //     delete s_players;
-    // }
+    function getUpKeepInterval() external view returns (uint256) {
+        return i_upKeepInterval;
+    }
 
-    function countDigits(uint256 x) internal pure returns (uint8) {
-        uint8 r = 0;
-        do {
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    // Other functions
+    function countDigits(uint256 x) private pure returns (uint8) {
+        if (x < 10) return 1;
+        uint8 c = 0;
+        while (x > 0) {
+            c++;
             x /= 10;
-            if (0 == x) break;
-            r++;
-        } while (true);
-        return r;
+        }
+        return c;
     }
 
     function wordsToIndexes(
         uint256[] memory randomWords,
         uint8 multiplier
-    ) internal pure returns (uint256[] memory) {
+    ) private pure returns (uint256[] memory) {
         for (uint8 i = 0; i < randomWords.length; i++) {
             randomWords[i] = randomWords[i] % (10 * multiplier);
         }
@@ -284,7 +250,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         address[] memory players,
         uint256 index,
         uint256 amount
-    ) internal {
+    ) public {
         if (index >= players.length) {
             // Player not found
             emit PrizeDismissed(prizeRanking);
@@ -293,7 +259,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
             address winner = players[index];
             emit PrizeWon(winner, prizeRanking);
             (bool callSuccess, ) = payable(winner).call{value: amount}("");
-            if (!callSuccess) {
+            if (callSuccess == false) {
                 revert Lottery__TransferFailed();
             } else {
                 emit PrizeAwarded(winner, prizeRanking, amount);
@@ -301,20 +267,21 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         }
     }
 
-    /**This is a mandatory call-back function: when the 3 random words are generated, go find and award the winner*/
+    // This is a mandatory call-back function: when the 3 random words are generated, go find and award the winner
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] memory randomWords
     ) internal override {
-        emit ReturnedRandomness(randomWords);
+        emit RandomWordsFulfilled(requestId, randomWords);
+
         // Reduce the the arbitary uint256 values of randomWords into a useable value
         uint8 digitsCount = countDigits(getNumberOfPlayers());
-        digitsCount--;
         randomWords = wordsToIndexes(randomWords, digitsCount);
+
         address[] memory players = s_players;
 
         // Find and award the winner of 1st prize
-        findAndAwardWinner(1, players, randomWords[0], (i_prize * 3) / 5);
+        findAndAwardWinner(1, players, randomWords[0], ((i_prize * 3) / 5));
 
         // Find and award the winner of 2nd prize
         findAndAwardWinner(2, players, randomWords[1], (i_prize * 3) / 10);
@@ -325,7 +292,21 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         // Clean up and prepare for new round
         s_players = new address[](0);
         s_lastTimeStamp = block.timestamp;
-        emit LotteryRoundEnded(s_latestRoundNumber, s_lastTimeStamp);
-        s_latestRoundNumber++;
+        emit LotteryRoundEnded(s_roundNumber, s_lastTimeStamp);
+        s_roundNumber++;
+    }
+
+    //Note: This function is intended to by used by the owner only, it will immediately end the lottery and refund the remaining balance to the owner
+    function closeLottery() external onlyOwner {
+        // Do not allow the owner to end the lottery when there's still players engaged
+        require(
+            getNumberOfPlayers() > 0,
+            "There's still players in the lottery session"
+        );
+
+        (bool callSuccess, ) = payable(address(this)).call{
+            value: address(this).balance
+        }("");
+        if (!callSuccess) revert Lottery__TransferFailed();
     }
 }
