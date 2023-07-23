@@ -11,10 +11,12 @@ async function deployLottery(verbose: boolean = true) {
         const IS_DEVELOPMENT_CHAIN: boolean = developmentChainIds.includes(CHAIN_ID);
 
         /**1. Print network infos*/
-        console.log("---------------------------- Contract deployment script ----------------------------\n");
-        console.log("--> Network: {\n\tName: ", networkConfig[CHAIN_ID as keyof typeof networkConfig].NAME);
-        console.log("\tChain-Id: ", CHAIN_ID);
-        console.log("}");
+        if (verbose) {
+            console.log("---------------------------- Contract deployment script ----------------------------\n");
+            console.log("--> Network: {\n\tName: ", networkConfig[CHAIN_ID as keyof typeof networkConfig].NAME);
+            console.log("\tChain-Id: ", CHAIN_ID);
+            console.log("}");
+        }
 
         /**2. extract network-dependent deploy parameters from networkConfig*/
         //Note, this deployInfos is an object that stores all the informations that reflects the deployment process of contracts and it will later be returned by this function
@@ -35,7 +37,7 @@ async function deployLottery(verbose: boolean = true) {
 
                 if (IS_DEVELOPMENT_CHAIN) {
                     // Deploy VRFCoordinatorV2Mock contract
-                    console.log("--> Local network detected! Deploying mock VRFCoordinatorV2Mock")
+                    console.log(verbose ? "--> Local network detected! Deploying mock VRFCoordinatorV2Mock" : "")
                     vrfCoordinatorV2Address = await deployVRFCoordinatorV2Mock() ?? "";
                     console.log(verbose ? `VRFCoordinatorV2Mock contract has been deployed to address ${vrfCoordinatorV2Address}` : "");
                 }
@@ -48,18 +50,18 @@ async function deployLottery(verbose: boolean = true) {
 
                 return vrfCoordinatorV2Address;
             })() as string,
-            
+
             // We don't initialize lotteryAddress because we haven't deployed the Lottery(Mock) contract
-            }
+        }
 
 
         /**3.Deploy Lottery/LotteryMock contract*/
         let lotteryFactory = await ethers.getContractFactory(IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery");
         let lottery = await lotteryFactory.deploy(
             // Pass in Lottery(Mock)'s constructor params
-            deployInfos.prize,                        // i_prize
-            deployInfos.joinFee,                     // i_joinFee
-            deployInfos.vrfCoordinatorV2Address,     // i_vrfCoordinatorV2Address
+            deployInfos.prize,                      // i_prize
+            deployInfos.joinFee,                    // i_joinFee
+            deployInfos.vrfCoordinatorV2Address,    // i_vrfCoordinatorV2Address
             deployInfos.vrfGasLane,                 // i_gasLane
             deployInfos.vrfSubscriptionId,          // i_subscriptionId
             deployInfos.callbackGasLimit,           // i_callBackGasLimit
@@ -67,16 +69,19 @@ async function deployLottery(verbose: boolean = true) {
 
             // Overrides
             {
-                value: deployInfos.isDevelopmentChain ? 0n: deployInfos.prize + ethers.parseEther("1")
-            })
+                value: deployInfos.isDevelopmentChain ? 0n : deployInfos.prize + ethers.parseEther("1")
+            }
+        )
         await lottery.waitForDeployment();
         deployInfos.lotteryAddress = await lottery.getAddress();
 
         /**4.Finished deploying, printing Lottery contracts' infos */
-        console.log(
-            (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
-        );
-        console.log("------------------------------------------------------------------------------------");
+        if (verbose) {
+            console.log(
+                (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
+            );
+            console.log("------------------------------------------------------------------------------------");
+        }
         return deployInfos;
 
     } catch (err: any) {
