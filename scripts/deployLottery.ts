@@ -27,7 +27,7 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
             prize: networkConfig[CHAIN_ID as keyof typeof networkConfig].PRIZE as bigint,
             joinFee: networkConfig[CHAIN_ID as keyof typeof networkConfig].JOIN_FEE as bigint,
             callbackGasLimit: networkConfig[CHAIN_ID as keyof typeof networkConfig].CALL_BACK_GAS_LIMIT as bigint,
-            upKeepInterval: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as number,
+            upKeepInterval: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as bigint,
 
             vrfCoordinatorV2Address: await (async () => {
                 /**Auto-detect type of network*/

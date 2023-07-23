@@ -7,7 +7,7 @@ export default interface DeployInfos {
     prize:  bigint;
     joinFee: bigint;
     callbackGasLimit: bigint;
-    upKeepInterval: number;
+    upKeepInterval: bigint;
     vrfCoordinatorV2Address: string;
     lotteryAddress?: string;
 }
