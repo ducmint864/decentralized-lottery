@@ -254,7 +254,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         address[] memory players,
         uint256 index,
         uint256 amount
-    ) public {
+    ) private {
         if (index >= players.length) {
             // Player not found
             emit PrizeDismissed(prizeRanking);
