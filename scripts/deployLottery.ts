@@ -4,7 +4,7 @@ import { developmentChainIds } from "../network.config.bonus";
 import DeployInfos from "./DeployInfos.type";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
-async function deployLottery() {
+async function deployLottery(verbose: boolean = true) {
     try {
         /**0. Arrange */
         const CHAIN_ID: number = (network.config.chainId as number) ?? process.env.DEFAULT_CHAIN_ID;
@@ -15,7 +15,6 @@ async function deployLottery() {
         console.log("--> Network: {\n\tName: ", networkConfig[CHAIN_ID as keyof typeof networkConfig].NAME);
         console.log("\tChain-Id: ", CHAIN_ID);
         console.log("}");
-        console.log("------------------------------------------------------------------------------------");
 
         /**2. extract network-dependent deploy parameters from networkConfig*/
         //Note, this deployInfos is an object that stores all the informations that reflects the deployment process of contracts and it will later be returned by this function
@@ -38,7 +37,7 @@ async function deployLottery() {
                     // Deploy VRFCoordinatorV2Mock contract
                     console.log("--> Local network detected! Deploying mock VRFCoordinatorV2Mock")
                     vrfCoordinatorV2Address = await deployVRFCoordinatorV2Mock() ?? "";
-                    console.log(`VRFCoordinatorV2Mock contract has been deployed to address ${vrfCoordinatorV2Address}`);
+                    console.log(verbose ? `VRFCoordinatorV2Mock contract has been deployed to address ${vrfCoordinatorV2Address}` : "");
                 }
 
                 // If we're on an online blockchain(testnets, mainnet), we will use the official VRFCoordinatorV2 contract provided by Chainlink
@@ -77,6 +76,7 @@ async function deployLottery() {
         console.log(
             (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
         );
+        console.log("------------------------------------------------------------------------------------");
         return deployInfos;
 
     } catch (err: any) {
@@ -85,9 +85,9 @@ async function deployLottery() {
     }
 }
 
-// Invoke deployLottery() with default parameters
-deployLottery().catch((err: any) => {
-    console.log(err);
-})
+// // Invoke deployLottery() with default parameters
+// deployLottery().catch((err: any) => {
+//     console.log(err);
+// })
 
 export default deployLottery;
