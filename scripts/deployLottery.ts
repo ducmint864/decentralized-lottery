@@ -3,10 +3,12 @@ import { networkConfig } from "../network.config.bonus";
 import { developmentChainIds } from "../network.config.bonus";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
-
 async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint = 2500000n, upKeepInterval: bigint = 60n) {
     try {
+        /**0. Arrange */
         const CHAIN_ID: number = (network.config.chainId as number) ?? process.env.DEFAULT_CHAIN_ID;
+        const IS_DEVELOPMENT_CHAIN: boolean = developmentChainIds.includes(CHAIN_ID);
+
         /**1. Print network infos*/
         console.log("---------------------------- Contract deployment script ----------------------------\n");
         console.log("--> Network: {\n\tName: ", networkConfig[CHAIN_ID as keyof typeof networkConfig].NAME);
@@ -14,26 +16,24 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
         console.log("}");
         console.log("------------------------------------------------------------------------------------");
 
-        /**2. Setup variables*/
-        let isDevelopmentChain: boolean = developmentChainIds.includes(CHAIN_ID);
-        let lotteryFactory;
-        let lottery;
-        let lotteryAddress;
+        /**2. extract network-dependent deploy parameters from networkConfig*/
+        //Note, this deployInfos is an object that stores all the informations that reflects the deployment process of contracts and it will later be returned by this function
+        let deployInfos = {
+            chainId: CHAIN_ID,
+            isDevelopmentChain: IS_DEVELOPMENT_CHAIN,
+            vrfSubscriptionId: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as number,
+            vrfGasLane: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_GAS_LANE as string,
+            prize: networkConfig[CHAIN_ID as keyof typeof networkConfig].PRIZE as bigint,
+            joinFee: networkConfig[CHAIN_ID as keyof typeof networkConfig].JOIN_FEE as bigint,
+            callbackGasLimit: networkConfig[CHAIN_ID as keyof typeof networkConfig].CALL_BACK_GAS_LIMIT as bigint,
+            upKeepInterval: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as number,
 
-        // extract network-dependent deploy parameters from networkConfig
-        const DEPLOY_PARAMS = {
-            VRF_SUBSCRIPTION_ID: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as number,
-            VRF_GAS_LANE: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_GAS_LANE as string,
-            PRIZE: networkConfig[CHAIN_ID as keyof typeof networkConfig].PRIZE as bigint,
-            JOIN_FEE: networkConfig[CHAIN_ID as keyof typeof networkConfig].JOIN_FEE as bigint,
-            CALLBACK_GAS_LIMIT: networkConfig[CHAIN_ID as keyof typeof networkConfig].CALL_BACK_GAS_LIMIT as bigint,
-            UP_KEEP_INTERVAL: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as number,
-            VRF_COORDINATOR_ADDRRESS: await (async () => {
+            vrfCoordinatorAddress: await (async () => {
                 /**Auto-detect type of network*/
                 // If we're on a development blockchain(hardhat, ganache), we will deploy the mock VRFCoordinatorV2Mock
                 let vrfCoordinatorV2Address: string;
 
-                if (isDevelopmentChain) {
+                if (IS_DEVELOPMENT_CHAIN) {
                     // Deploy VRFCoordinatorV2Mock contract
                     console.log("--> Local network detected! Deploying mock VRFCoordinatorV2Mock")
                     vrfCoordinatorV2Address = await deployVRFCoordinatorV2Mock() ?? "";
@@ -47,34 +47,36 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
                 }
 
                 return vrfCoordinatorV2Address;
-            })() as string
+            })() as string,
+            
+            lotteryAddress: "" // Leave blank for now until we deploy the Lottery(Mock) contract
         }
 
 
         /**3.Deploy Lottery/LotteryMock contract*/
-        lotteryFactory = await ethers.getContractFactory(isDevelopmentChain ? "LotteryMock" : "Lottery");
-        lottery = await lotteryFactory.deploy(
+        let lotteryFactory = await ethers.getContractFactory(IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery");
+        let lottery = await lotteryFactory.deploy(
             // Pass in Lottery(Mock)'s constructor params
-            DEPLOY_PARAMS.PRIZE,                        // i_prize
-            DEPLOY_PARAMS.JOIN_FEE,                     // i_joinFee
-            DEPLOY_PARAMS.VRF_COORDINATOR_ADDRRESS,     // i_vrfCoordinatorV2Address
-            DEPLOY_PARAMS.VRF_GAS_LANE,                 // i_gasLane
-            DEPLOY_PARAMS.VRF_SUBSCRIPTION_ID,          // i_subscriptionId
-            DEPLOY_PARAMS.CALLBACK_GAS_LIMIT,           // i_callBackGasLimit
-            DEPLOY_PARAMS.UP_KEEP_INTERVAL,             // i_upKeepInterval
+            deployInfos.prize,                        // i_prize
+            deployInfos.joinFee,                     // i_joinFee
+            deployInfos.vrfCoordinatorAddress,     // i_vrfCoordinatorV2Address
+            deployInfos.vrfGasLane,                 // i_gasLane
+            deployInfos.vrfSubscriptionId,          // i_subscriptionId
+            deployInfos.callbackGasLimit,           // i_callBackGasLimit
+            deployInfos.upKeepInterval,             // i_upKeepInterval
 
             // Overrides
             {
                 value: ethers.parseEther(ethPrize + 1)
             })
         await lottery.waitForDeployment();
-        lotteryAddress = await lottery.getAddress();
+        deployInfos.lotteryAddress = await lottery.getAddress();
 
         /**4.Finished deploying, printing Lottery contracts' infos */
         console.log(
-            (isDevelopmentChain ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${lotteryAddress}`
+            (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
         );
-        return [DEPLOY_PARAMS.VRF_COORDINATOR_ADDRRESS, lotteryAddress];
+        return deployInfos;
 
     } catch (err: any) {
         console.log(err);
