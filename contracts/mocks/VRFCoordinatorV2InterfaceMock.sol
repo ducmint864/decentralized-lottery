@@ -124,4 +124,7 @@ interface VRFCoordinatorV2Interface {
   function pendingRequestExists(uint64 subId) external view returns (bool);
 
   function fundSubscription(uint64 _subId, uint96 _amount) external; // Manually added. This is a mock
+
+// manually added functions for testing purpose
+  function getCurrentSubId() external view returns (uint64);
 }
