@@ -127,4 +127,6 @@ interface VRFCoordinatorV2Interface {
 
 // manually added functions for testing purpose
   function getCurrentSubId() external view returns (uint64);
+  
+  function getConsumer(uint64 subId, uint8 index) external view returns (address);
 }

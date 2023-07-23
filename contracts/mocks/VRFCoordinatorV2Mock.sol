@@ -374,4 +374,12 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface {
     function getCurrentSubId() external view override returns (uint64) {
         return s_currentSubId;
     }
+
+    function getConsumer(
+        uint64 subId,
+        uint8 index
+    ) external view returns (address) {
+        address[] memory consumers = s_consumers[subId];
+        return consumers[index];
+    }
 }
