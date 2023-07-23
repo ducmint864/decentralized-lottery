@@ -1,0 +1,13 @@
+/**Here is the definition of type DeployInfos*/
+export default interface DeployInfos {
+    chainId: number;
+    isDevelopmentChain: boolean;
+    vrfSubscriptionId: number;
+    vrfGasLane: string;
+    prize:  bigint;
+    joinFee: bigint;
+    callbackGasLimit: bigint;
+    upKeepInterval: number;
+    vrfCoordinatorV2Address: string;
+    lotteryAddress?: string;
+}

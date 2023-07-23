@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import { networkConfig } from "../network.config.bonus";
 import { developmentChainIds } from "../network.config.bonus";
+import DeployInfos from "./DeployInfos.type";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
 async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint = 2500000n, upKeepInterval: bigint = 60n) {
@@ -18,7 +19,7 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
 
         /**2. extract network-dependent deploy parameters from networkConfig*/
         //Note, this deployInfos is an object that stores all the informations that reflects the deployment process of contracts and it will later be returned by this function
-        let deployInfos = {
+        let deployInfos: DeployInfos = {
             chainId: CHAIN_ID,
             isDevelopmentChain: IS_DEVELOPMENT_CHAIN,
             vrfSubscriptionId: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as number,
@@ -49,8 +50,8 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
                 return vrfCoordinatorV2Address;
             })() as string,
             
-            lotteryAddress: "" // Leave blank for now until we deploy the Lottery(Mock) contract
-        }
+            // We don't initialize lotteryAddress because we haven't deployed the Lottery(Mock) contract
+            }
 
 
         /**3.Deploy Lottery/LotteryMock contract*/
