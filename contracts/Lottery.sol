@@ -304,7 +304,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function closeLottery() external onlyOwner {
         // Do not allow the owner to end the lottery when there's still players engaged
         require(
-            getNumberOfPlayers() > 0,
+            getNumberOfPlayers() == 0,
             "There's still players in the lottery session"
         );
 
