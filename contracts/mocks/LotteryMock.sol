@@ -402,7 +402,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return randomWords;
     }
 
-    function getBlockTimeStamp() external view returns(uint256) {
+    function getBlockTimestamp() external view returns(uint256) {
         return block.timestamp;
     }
 }
