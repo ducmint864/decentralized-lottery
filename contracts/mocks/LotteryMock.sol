@@ -209,6 +209,10 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return i_prize;
     }
 
+    function getJoinFee() external view returns (uint256) {
+        return i_joinFee;
+    }
+
     function getRequestId() external view returns (uint256) {
         return s_requestId;
     }

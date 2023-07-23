@@ -188,6 +188,10 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return i_prize;
     }
 
+    function getJoinFee() external view returns (uint256) {
+        return i_joinFee;
+    }
+
     function getVRFCoordinatorV2()
         external
         view
