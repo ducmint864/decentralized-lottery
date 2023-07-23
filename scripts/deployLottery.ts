@@ -68,7 +68,7 @@ async function deployLottery() {
 
             // Overrides
             {
-                value: ethers.parseEther(ethPrize + 1)
+                value: deployInfos.prize + ethers.parseEther("1")
             })
         await lottery.waitForDeployment();
         deployInfos.lotteryAddress = await lottery.getAddress();
