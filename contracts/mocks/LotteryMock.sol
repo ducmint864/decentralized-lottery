@@ -298,10 +298,10 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function wordsToIndexes(
         uint256[] memory randomWords,
-        uint8 multiplier
+        uint8 digits
     ) public pure returns (uint256[] memory) {
         for (uint8 i = 0; i < randomWords.length; i++) {
-            randomWords[i] = randomWords[i] % (10 ** multiplier);
+            randomWords[i] = randomWords[i] % (10 ** digits);
         }
         return randomWords;
     }
@@ -378,9 +378,27 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function clearPlayers() external onlyOwner {
         address[] memory players = s_players;
         for (uint i = 0; i < players.length; i++) {
-            (bool callSuccess, ) = payable(players[i]).call{value: i_joinFee}("");
+            (bool callSuccess, ) = payable(players[i]).call{value: i_joinFee}(
+                ""
+            );
             if (!callSuccess) revert Lottery__TransferFailed();
         }
         s_players = new address[](0);
+    }
+
+    // Note: this function number is only available in the mock contract
+    function mockRandomWords() external view returns (uint256[6] memory) {
+        uint256[6] memory randomWords;
+        uint256 seed = uint256(
+            keccak256(
+                abi.encodePacked(block.timestamp, block.difficulty, msg.sender)
+            )
+        );
+        for (uint256 i = 0; i < 6; i++) {
+            seed = uint256(keccak256(abi.encodePacked(seed)));
+            randomWords[i] = seed;
+        }
+
+        return randomWords;
     }
 }

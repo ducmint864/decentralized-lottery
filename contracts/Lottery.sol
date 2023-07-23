@@ -241,10 +241,10 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function wordsToIndexes(
         uint256[] memory randomWords,
-        uint8 multiplier
+        uint8 digits
     ) private pure returns (uint256[] memory) {
         for (uint8 i = 0; i < randomWords.length; i++) {
-            randomWords[i] = randomWords[i] % (10 ** multiplier);
+            randomWords[i] = randomWords[i] % (10 **digitsr);
         }
         return randomWords;
     }
