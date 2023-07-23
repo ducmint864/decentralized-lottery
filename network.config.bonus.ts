@@ -12,7 +12,7 @@ export const networkConfig = {
         PRIZE: ethers.parseEther("1000") as bigint, // 1000 Eth
         JOIN_FEE: ethers.parseEther("3") as bigint, // 3 Eth
         CALL_BACK_GAS_LIMIT: BigInt(3000000) as bigint,
-        UP_KEEP_INTERVAL: 30 as number
+        UP_KEEP_INTERVAL: 30n as bigint
     },
     31337: {
         NAME: "hardhat_localhost" as string,
@@ -23,7 +23,7 @@ export const networkConfig = {
         PRIZE: ethers.parseEther("1000") as bigint, // 1000 Eth
         JOIN_FEE: ethers.parseEther("3") as bigint, // 3 Eth
         CALL_BACK_GAS_LIMIT: BigInt(3000000) as bigint,
-        UP_KEEP_INTERVAL: 30 as number
+        UP_KEEP_INTERVAL: 30n as bigint
     },
     11155111: {
         NAME: "sepolia_testnet",
@@ -34,7 +34,7 @@ export const networkConfig = {
         PRIZE: ethers.parseEther("0.1") as bigint, // 0.1 Eth
         JOIN_FEE: ethers.parseEther("0.03") as bigint, // 0.03 Eth
         CALL_BACK_GAS_LIMIT: BigInt(3000000) as bigint,
-        UP_KEEP_INTERVAL: 60 as number
+        UP_KEEP_INTERVAL: 6n as bigint
     }
 }
 

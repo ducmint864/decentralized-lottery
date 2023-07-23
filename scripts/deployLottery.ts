@@ -4,7 +4,7 @@ import { developmentChainIds } from "../network.config.bonus";
 import DeployInfos from "./DeployInfos.type";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
-async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint = 2500000n, upKeepInterval: bigint = 60n) {
+async function deployLottery() {
     try {
         /**0. Arrange */
         const CHAIN_ID: number = (network.config.chainId as number) ?? process.env.DEFAULT_CHAIN_ID;
