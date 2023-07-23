@@ -213,6 +213,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return i_joinFee;
     }
 
+    // Note: this function only exists in the LotteryMock contract
     function getRequestId() external view returns (uint256) {
         return s_requestId;
     }
