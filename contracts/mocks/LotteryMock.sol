@@ -275,7 +275,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint8 multiplier
     ) public pure returns (uint256[] memory) {
         for (uint8 i = 0; i < randomWords.length; i++) {
-            randomWords[i] = randomWords[i] % (10 * multiplier);
+            randomWords[i] = randomWords[i] % (10 ** multiplier);
         }
         return randomWords;
     }
