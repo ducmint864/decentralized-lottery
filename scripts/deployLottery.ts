@@ -28,7 +28,7 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
             callbackGasLimit: networkConfig[CHAIN_ID as keyof typeof networkConfig].CALL_BACK_GAS_LIMIT as bigint,
             upKeepInterval: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as number,
 
-            vrfCoordinatorAddress: await (async () => {
+            vrfCoordinatorV2Address: await (async () => {
                 /**Auto-detect type of network*/
                 // If we're on a development blockchain(hardhat, ganache), we will deploy the mock VRFCoordinatorV2Mock
                 let vrfCoordinatorV2Address: string;
@@ -59,7 +59,7 @@ async function deployLottery(ethPrize: string = "10", callbackGaslimit: bigint =
             // Pass in Lottery(Mock)'s constructor params
             deployInfos.prize,                        // i_prize
             deployInfos.joinFee,                     // i_joinFee
-            deployInfos.vrfCoordinatorAddress,     // i_vrfCoordinatorV2Address
+            deployInfos.vrfCoordinatorV2Address,     // i_vrfCoordinatorV2Address
             deployInfos.vrfGasLane,                 // i_gasLane
             deployInfos.vrfSubscriptionId,          // i_subscriptionId
             deployInfos.callbackGasLimit,           // i_callBackGasLimit
