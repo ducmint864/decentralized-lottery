@@ -387,18 +387,22 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     // Note: this function number is only available in the mock contract
-    function mockRandomWords() external view returns (uint256[6] memory) {
-        uint256[6] memory randomWords;
+    function mockRandomWords() external view returns (uint256[3] memory) {
+        uint256[3] memory randomWords;
         uint256 seed = uint256(
             keccak256(
                 abi.encodePacked(block.timestamp, block.difficulty, msg.sender)
             )
         );
-        for (uint256 i = 0; i < 6; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             seed = uint256(keccak256(abi.encodePacked(seed)));
             randomWords[i] = seed;
         }
 
         return randomWords;
+    }
+
+    function getBlockTimeStamp() external view returns(uint256) {
+        return block.timestamp;
     }
 }
