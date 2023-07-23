@@ -344,4 +344,16 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         }("");
         if (!callSuccess) revert Lottery__TransferFailed();
     }
+
+    // Note: this function is only available in the mock contract
+    // This function is used refund the join fee to all the players in s_players array and then clear that array
+    // This function should be called before closeLottery()
+    function clearPlayers() external onlyOwner {
+        address[] memory players = s_players;
+        for (uint i = 0; i < players.length; i++) {
+            (bool callSuccess, ) = payable(players[i]).call{value: i_joinFee}("");
+            if (!callSuccess) revert Lottery__TransferFailed();
+        }
+        s_players = new address[](0);
+    }
 }
