@@ -119,11 +119,9 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     {
         bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) >
             i_upKeepInterval;
-        bool hasEnoughPlayers = getNumberOfPlayers() >= 10;
-        bool hasEnoughFund = address(this).balance >= (i_prize + 1 ether);
-        bool upKeepNeeded = (enoughTimeHasPassed &&
-            hasEnoughPlayers &&
-            hasEnoughFund);
+        bool hasEnoughPlayers = getNumberOfPlayers() >=
+            MINIMUM_NUMBER_OF_PLAYERS;
+        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers);
 
         // We don't use the checkData in this example. The checkData is defined when the Upkeep was registered.
         return (upKeepNeeded, abi.encodePacked(upKeepNeeded));
@@ -138,9 +136,6 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         bool hasEnoughPlayers = getNumberOfPlayers() >=
             MINIMUM_NUMBER_OF_PLAYERS;
         if (!hasEnoughPlayers) revert Lottery__NotEnoughPlayers();
-
-        bool hasEnoughFund = address(this).balance >= (i_prize + 1 ether);
-        if (!hasEnoughFund) revert Lottery__NotEnoughFund();
 
         emit UpKeepTriggered(s_roundNumber, block.timestamp);
 
@@ -383,12 +378,15 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     // Note: this function number is only available in the mock contract
-    function testWordsToIndexes(uint256[] memory words, uint8 digits) external pure returns (uint256[] memory) {
+    function testWordsToIndexes(
+        uint256[] memory words,
+        uint8 digits
+    ) external pure returns (uint256[] memory) {
         words = wordsToIndexes(words, digits);
         return words;
     }
 
-    function getBlockTimestamp() external view returns(uint256) {
+    function getBlockTimestamp() external view returns (uint256) {
         return block.timestamp;
     }
 }
