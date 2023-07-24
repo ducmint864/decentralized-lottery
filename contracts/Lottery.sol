@@ -308,7 +308,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
             "There's still players in the lottery session"
         );
 
-        (bool callSuccess, ) = payable(address(this)).call{
+        (bool callSuccess, ) = payable(address(i_owner)).call{
             value: address(this).balance
         }("");
         if (!callSuccess) revert Lottery__TransferFailed();

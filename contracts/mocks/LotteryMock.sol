@@ -366,7 +366,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
             "There's still players in the lottery session"
         );
 
-        (bool callSuccess, ) = payable(address(this)).call{
+        (bool callSuccess, ) = payable(address(i_owner)).call{
             value: address(this).balance
         }("");
         if (!callSuccess) revert Lottery__TransferFailed();
@@ -387,19 +387,9 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     // Note: this function number is only available in the mock contract
-    function mockRandomWords() external view returns (uint256[3] memory) {
-        uint256[3] memory randomWords;
-        uint256 seed = uint256(
-            keccak256(
-                abi.encodePacked(block.timestamp, block.difficulty, msg.sender)
-            )
-        );
-        for (uint256 i = 0; i < 3; i++) {
-            seed = uint256(keccak256(abi.encodePacked(seed)));
-            randomWords[i] = seed;
-        }
-
-        return randomWords;
+    function testWordsToIndexes(uint256[] memory words, uint8 digits) external pure returns (uint256[] memory) {
+        words = wordsToIndexes(words, digits);
+        return words;
     }
 
     function getBlockTimestamp() external view returns(uint256) {
