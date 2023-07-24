@@ -128,7 +128,7 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface {
         if (_words.length == 0) {
             _words = new uint256[](req.numWords);
             for (uint256 i = 0; i < req.numWords; i++) {
-                _words[i] = uint256(keccak256(abi.encode(_requestId, i)));
+                _words[i] = uint256(keccak256(abi.encode(_requestId, i, blockhash(i))));
             }
         } else if (_words.length != req.numWords) {
             revert InvalidRandomWords();
