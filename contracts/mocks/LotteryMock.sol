@@ -100,16 +100,12 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_prize = _prize;
         i_joinFee = _joinFee;
         i_gasLane = _gasLane;
-        // i_subscriptionId = _subscriptionId;
+        i_subscriptionId = _subscriptionId;
         i_callbackGasLimit = _callbackGasLimit;
         i_upKeepInterval = _upKeepInterval;
         i_vrfCoordinatorV2Mock = VRFCoordinatorV2Interface(
             _vrfCoordinatorV2MockAddress
         );
-
-        // These 2 lines only exists in the mock contract
-        i_subscriptionId = i_vrfCoordinatorV2Mock.createSubscription();
-        i_vrfCoordinatorV2Mock.addConsumer(i_subscriptionId, address(this));
     }
 
     //Note: In a mock contract, we don't need use this function because it was meant to be called by Chainlink Automation Service. But they don't exist on a local blockchain ¯\_(ツ)_/¯*/

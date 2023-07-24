@@ -60,6 +60,7 @@ async function deployLottery(verbose: boolean = true) {
             await vrfCoordinatorV2Mock.createSubscription();
             let subscriptionId: bigint = await vrfCoordinatorV2Mock.getCurrentSubId();
             deployInfos.vrfSubscriptionId = subscriptionId;
+            console.log(verbose ? `Subscribed to VRFCoordinatorV2Mock. Subscription ID: ${deployInfos.vrfSubscriptionId}` : "");
         }
 
 
@@ -83,7 +84,14 @@ async function deployLottery(verbose: boolean = true) {
         await lottery.waitForDeployment();
         deployInfos.lotteryAddress = await lottery.getAddress();
 
-        /**5. Finished deploying, printing Lottery contracts' infos */
+        /**5. If on a local blockchain, add LotteryMock as a new consumer of VRFCoordinatorV2Mock */
+        if (deployInfos.isDevelopmentChain) {
+            let vrfCooridnatorV2Mock: VRFCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", deployInfos.vrfCoordinatorV2Address);
+            await vrfCooridnatorV2Mock.addConsumer(deployInfos.vrfSubscriptionId, deployInfos.lotteryAddress);
+            console.log(verbose ? `Added consumer to VRFCoordinatorV2Mock: {\n\tSubscription ID: ${deployInfos.vrfSubscriptionId}\n\tConsumer: ${deployInfos.lotteryAddress}\n}` : "");
+        }
+
+        /**6. Finished, now printing Lottery contracts' infos */
         if (verbose) {
             console.log(
                 (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
