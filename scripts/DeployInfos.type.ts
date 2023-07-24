@@ -2,7 +2,7 @@
 export default interface DeployInfos {
     chainId: number;
     isDevelopmentChain: boolean;
-    vrfSubscriptionId: number;
+    vrfSubscriptionId: bigint;
     vrfGasLane: string;
     prize:  bigint;
     joinFee: bigint;

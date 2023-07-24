@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import { networkConfig } from "../network.config.bonus";
 import { developmentChainIds } from "../network.config.bonus";
+import { VRFCoordinatorV2Mock } from "../typechain-types";
 import DeployInfos from "./DeployInfos.type";
 import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
@@ -18,12 +19,11 @@ async function deployLottery(verbose: boolean = true) {
             console.log("}");
         }
 
-        /**2. extract network-dependent deploy parameters from networkConfig*/
-        //Note, this deployInfos is an object that stores all the informations that reflects the deployment process of contracts and it will later be returned by this function
+        /**2. Extract network-dependent deploy parameters from networkConfig*/
         let deployInfos: DeployInfos = {
             chainId: CHAIN_ID,
             isDevelopmentChain: IS_DEVELOPMENT_CHAIN,
-            vrfSubscriptionId: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as number,
+            vrfSubscriptionId: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as bigint,
             vrfGasLane: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_GAS_LANE as string,
             prize: networkConfig[CHAIN_ID as keyof typeof networkConfig].PRIZE as bigint,
             joinFee: networkConfig[CHAIN_ID as keyof typeof networkConfig].JOIN_FEE as bigint,
@@ -32,33 +32,41 @@ async function deployLottery(verbose: boolean = true) {
 
             vrfCoordinatorV2Address: await (async () => {
                 /**Auto-detect type of network*/
-                // If we're on a development blockchain(hardhat, ganache), we will deploy the mock VRFCoordinatorV2Mock
+                // if we're on a development blockchain(hardhat, ganache), we will deploy the mock VRFCoordinatorV2Mock
                 let vrfCoordinatorV2Address: string;
 
                 if (IS_DEVELOPMENT_CHAIN) {
-                    // Deploy VRFCoordinatorV2Mock contract
+                    // deploy VRFCoordinatorV2Mock contract
                     console.log(verbose ? "--> Local network detected! Deploying mock VRFCoordinatorV2Mock" : "")
                     vrfCoordinatorV2Address = await deployVRFCoordinatorV2Mock() ?? "";
                     console.log(verbose ? `VRFCoordinatorV2Mock contract has been deployed to address ${vrfCoordinatorV2Address}` : "");
                 }
 
-                // If we're on an online blockchain(testnets, mainnet), we will use the official VRFCoordinatorV2 contract provided by Chainlink
+                // if we're on an online blockchain(testnets, mainnet), we will use the official VRFCoordinatorV2 contract provided by Chainlink
                 else {
-                    // Gets address of the already on-chain Chainlink VRFCoordinatorV2 contract
+                    // get the address of the on-chain Chainlink VRFCoordinatorV2 contract
                     vrfCoordinatorV2Address = networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_COORDINATOR_ADDRESS;
                 }
 
                 return vrfCoordinatorV2Address;
             })() as string,
 
-            // We don't initialize lotteryAddress because we haven't deployed the Lottery(Mock) contract
+            // We don't initialize lotteryAddress property because we haven't deployed the Lottery(Mock) contract
+        }
+
+        /**3. If on a local blockchain, subscribe to VRFCoordinatorV2Mock to get the subscriptionId */
+        if (deployInfos.isDevelopmentChain) {
+            let vrfCoordinatorV2Mock : VRFCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", deployInfos.vrfCoordinatorV2Address);
+            await vrfCoordinatorV2Mock.createSubscription();
+            let subscriptionId: bigint = await vrfCoordinatorV2Mock.getCurrentSubId();
+            deployInfos.vrfSubscriptionId = subscriptionId;
         }
 
 
-        /**3.Deploy Lottery/LotteryMock contract*/
-        let lotteryFactory = await ethers.getContractFactory(IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery");
+        /**4. Deploy Lottery/LotteryMock contract*/
+        let lotteryFactory = await ethers.getContractFactory(deployInfos.isDevelopmentChain ? "LotteryMock" : "Lottery");
         let lottery = await lotteryFactory.deploy(
-            // Pass in Lottery(Mock)'s constructor params
+            // pass in Lottery(Mock)'s constructor params
             deployInfos.prize,                      // i_prize
             deployInfos.joinFee,                    // i_joinFee
             deployInfos.vrfCoordinatorV2Address,    // i_vrfCoordinatorV2Address
@@ -67,7 +75,7 @@ async function deployLottery(verbose: boolean = true) {
             deployInfos.callbackGasLimit,           // i_callBackGasLimit
             deployInfos.upKeepInterval,             // i_upKeepInterval
 
-            // Overrides
+            // overrides
             {
                 value: deployInfos.isDevelopmentChain ? 0n : deployInfos.prize + ethers.parseEther("1")
             }
@@ -75,7 +83,7 @@ async function deployLottery(verbose: boolean = true) {
         await lottery.waitForDeployment();
         deployInfos.lotteryAddress = await lottery.getAddress();
 
-        /**4.Finished deploying, printing Lottery contracts' infos */
+        /**5. Finished deploying, printing Lottery contracts' infos */
         if (verbose) {
             console.log(
                 (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
