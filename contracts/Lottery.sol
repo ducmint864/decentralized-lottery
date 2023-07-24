@@ -117,9 +117,9 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     {
         bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) >
             i_upKeepInterval;
-        bool hasEnoughPlayers = getNumberOfPlayers() >= MINIMUM_NUMBER_OF_PLAYERS;
-        bool upKeepNeeded = (enoughTimeHasPassed &&
-            hasEnoughPlayers);
+        bool hasEnoughPlayers = getNumberOfPlayers() >=
+            MINIMUM_NUMBER_OF_PLAYERS;
+        bool upKeepNeeded = (enoughTimeHasPassed && hasEnoughPlayers);
 
         // We don't use the checkData in this example. The checkData is defined when the Upkeep was registered.
         return (upKeepNeeded, abi.encodePacked(upKeepNeeded));
@@ -134,9 +134,18 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         bool hasEnoughPlayers = getNumberOfPlayers() >=
             MINIMUM_NUMBER_OF_PLAYERS;
         if (!hasEnoughPlayers) revert Lottery__NotEnoughPlayers();
-        
+
         emit UpKeepTriggered(s_roundNumber, block.timestamp);
+        
         uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
+            i_gasLane,
+            i_subscriptionId,
+            MINIMUM_REQUEST_CONFIRMATIONS,
+            i_callbackGasLimit,
+            NUM_WORDS
+        );
+
+        emit RandomWordsRequested(
             i_gasLane,
             i_subscriptionId,
             MINIMUM_REQUEST_CONFIRMATIONS,
