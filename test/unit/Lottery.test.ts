@@ -1,13 +1,15 @@
-import "@nomicfoundation/hardhat-ethers"
-import { ethers } from "hardhat";
+import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+import { ethers, network } from "hardhat";
 import { assert, expect } from "chai";
 import { LotteryMock, VRFCoordinatorV2Mock } from "../../typechain-types";
-import { networkConfig } from "../../network.config.bonus";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
+import { developmentChainIds } from "../../network.config.bonus";
 import deployLottery from "../../scripts/deployLottery";
 import DeployInfos from "../../scripts/DeployInfos.type";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { BigNumberish, Block } from "ethers";
 
+!developmentChainIds.includes(network.config.chainId as number) ? describe.skip :
 describe("Lottery", () => {
     /**Variables. Note: This unit test is meant for local network, so we assume everything is mocked. Therefore, in case of variables name, VRFCoordinatorV2 is actually VRFCoordinatorV2Mock, lottery is actuall lotteryMock*/
     let deployInfos: DeployInfos;
@@ -51,19 +53,21 @@ describe("Lottery", () => {
 
     describe("fund()", () => {
         it("updates the correct amount of Eth funded", async () => {
-            const balanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
-            const amount: bigint = ethers.parseEther("1");
-            await lottery.fund({ value: amount });
-            const balanceAfter: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
-            assert.equal(balanceBefore + amount, balanceAfter);
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            await expect(lottery.fund({
+                value: amount,
+            })).to.changeEtherBalances([owner.address, deployInfos.lotteryAddress], [-amount, amount]);
         })
-        it("emits a LotteryFunded(address funder, uin256 amount) event");
+        it("emits a LotteryFunded(address funder, uin256 amount) event", async () => {
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            await expect(lottery.fund({value: amount})).to.emit(lottery, "LotteryFunded").withArgs(owner.address, amount);
+        }); 
     })
 
     describe("fallback()", () => {
         it("calls fund() & updates the correct amount of Eth funded when someone transfer some Eth to the contract along with some msg.data", async () => {
             const selector: string = "0x080604";
-            const amount: bigint = ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
             const balanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             await owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
@@ -73,12 +77,18 @@ describe("Lottery", () => {
             const balanceAfter: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             assert.equal(balanceBefore + amount, balanceAfter);
         })
-        it("emits the event LotteryFunded(address funder, uint256 amount)");
+        it("emits the event LotteryFunded(address funder, uint256 amount)", async () => {
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            await expect(owner.sendTransaction({
+                to: deployInfos.lotteryAddress,
+                value: amount
+            })).to.emit(lottery, "LotteryFunded").withArgs(owner.address, amount);
+        });
     })
 
     describe("receive()", () => {
         it("call fund() & update the correct amount of Eth funded when someone transfer Eth to the contract with no transfer data", async () => {
-            const amount: bigint = ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
             const balanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             await owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
@@ -87,10 +97,15 @@ describe("Lottery", () => {
             const balanceAfter: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             assert.equal(balanceBefore + amount, balanceAfter);
         })
-        it("emits the event LotteryFunded(address funder, uint256 amount)", async () => { });
+        it("emits the event LotteryFunded(address funder, uint256 amount)", async () => {
+            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            await expect(owner.sendTransaction({
+                to: deployInfos.lotteryAddress,
+                value: amount
+            })).to.emit(lottery, "LotteryFunded").withArgs(owner.address, amount);
+        });
     })
 
-    // Reason commented out: error that halves the owner's balance
     describe("join()", () => {
         it("doesn't anyone join if the owner hasn't funded enough money", async () => {
             await expect(lotteryForPlayer.join({ value: deployInfos.joinFee })).to.be.revertedWithCustomError(lotteryForPlayer, "Lottery__NotEnoughFund");
@@ -265,15 +280,46 @@ describe("Lottery", () => {
     })
 
     describe("findAndAwardWinner()", () => {
-        // before(async () => {
-        //     await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
-        //     for (let i = 0; i < signers.length; i++) {
-
-        //     }
-        // })
-        it("if winner isn't found, emits the event PrizeDismissed(uint8 prizeRanking)")
-        it("if winner is found, emits the event PrizeWon(address winner, uint8 prizeRanking)")
-        it("if winner is found, after emitting the event PrizeWon, it then send award to winner and then emits the event PrizeAwarded(address winner, uint8 prizeRanking, uint256 amount)")
+        let maxPlayers: bigint;
+        let prizeRanking: bigint;
+        let amount: bigint;
+        let index: bigint;
+        let winner: string;
+        
+        beforeEach(async () => {
+            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            maxPlayers = await lottery.getMaximumNumberOfPlayers();
+            for (let i = 0; i < maxPlayers; i++)    {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+        })
+        it("if winner isn't found, emits the event PrizeDismissed(uint8 prizeRanking)", async () => {
+            prizeRanking = 1n;
+            amount = deployInfos.prize + ethers.parseEther("1");
+            index = maxPlayers;
+            await expect(lottery.testFindAndAwardWinner(prizeRanking, index, amount)).to.emit(lottery, "PrizeDismissed").withArgs(prizeRanking);
+        })
+        it("if winner is found, emits the event PrizeWon(address winner, uint8 prizeRanking)", async () => {
+            for (let i = 0; i < 3; i++) {
+                prizeRanking = BigInt(i + 1);
+                amount = ethers.parseEther("0");
+                index = 0n;
+                winner = await lottery.getPlayer(index);
+                await expect(lottery.testFindAndAwardWinner(prizeRanking, index, amount)).to.emit(lottery, "PrizeWon").withArgs(winner, prizeRanking);
+            }
+        })
+        it("if winner is found, it sends Eth awards to winners then emits the event PrizeAwarded(address winner, uint8 prizeRanking, uint256 amount)", async () => {
+            for (let i = 0; i < 3; i++) {
+                prizeRanking = BigInt(i + 1);
+                amount = ethers.parseEther(`${3 - i}`);
+                index = 0n;
+                winner = await lottery.getPlayer(index);
+                await expect(lottery.testFindAndAwardWinner(prizeRanking, index, amount)).to.changeEtherBalances(
+                    [deployInfos.lotteryAddress, winner],
+                    [-amount, amount]
+                ).to.emit(lottery, "PrizeAwarded").withArgs(winner, prizeRanking, amount);
+            }
+        })
     })
 
     describe("checkUpKeep()", () => {
@@ -292,25 +338,14 @@ describe("Lottery", () => {
                 await lotteryForPlayer.join({ value: deployInfos.joinFee });
             }
 
-            // We've got to be quick to execute checkUpKeep() quickly to not exceed upKeepInterval.
-            // Otherwise, this test case will be dis-regarded
-            const currentTimestamp: bigint = await lottery.getBlockTimestamp();
-            const lastTimetamp: bigint = await lottery.getLastTimeStamp();
-            if (currentTimestamp - lastTimetamp <= deployInfos.upKeepInterval) {
-                it.skip;
-            }
-            else {
-                let upKeepNeeded: boolean
-                [upKeepNeeded,] = await lottery.checkUpkeep("0x00") as [boolean, string];
-                assert.equal(upKeepNeeded, false);
-            }
+            let upKeepNeeded: boolean;
+            [upKeepNeeded, ] = await lottery.checkUpkeep("0x00") as [boolean, string];
+            assert.equal(upKeepNeeded, false)
         })
         it("returns false when enoughTimeHasPassed but !hasEnoughPlayers", async () => {
-            await (() => {
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, Number(deployInfos.upKeepInterval) * 1000 + 1000);  // enoughTimeHasPassed ✅
-                })
-            })();
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ]);
 
             let upKeepNeeded: boolean;
             [upKeepNeeded,] = await lottery.checkUpkeep("0x00") as [boolean, string];
@@ -322,11 +357,9 @@ describe("Lottery", () => {
             assert.equal(upKeepNeeded, false);
         })
         it("returns true when (hasEnoughPlayers && enoughTimeHasPassed)", async () => {
-            await (() => {
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, Number(deployInfos.upKeepInterval) * 1000 + 1000);  // enoughTimeHasPassed ✅
-                })
-            })();
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ]);
 
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
             let i;
@@ -349,32 +382,33 @@ describe("Lottery", () => {
         beforeEach(async () => {
             await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
         })
-        it("reverts with custom error Lottery__NotEnoughTimeHasPassed if !enoughTimeHasPassed (easy)", async () => {
+        it("reverts with custom error Lottery__NotEnoughTimeHasPassed if hasEnoughPlayers but !enoughTimeHasPassed (easy)", async () => {
+            let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
+            for (let i = 0; i < minPlayers; i++) {
+                lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
             await expect(lottery.performUpkeep("0x00")).to.be.revertedWithCustomError(lottery, "Lottery__NotEnoughTimeHasPassed");
         })
-        it("reverts with custom error Lottery__NotEnoughTimeHasPassed if !enoughTimeHasPassed (extreme)", async () => {
-            await (() => {
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, Number(deployInfos.upKeepInterval) * 1000 - 1000);
-                })
-            })();
+        it("reverts with custom error Lottery__NotEnoughTimeHasPassed if hasEnoughPlayers but !enoughTimeHasPassed (extreme)", async () => {
+            let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
+            for (let i = 0; i < minPlayers; i++) {
+                lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) - 5
+            ])
             await expect(lottery.performUpkeep("0x00")).to.be.revertedWithCustomError(lottery, "Lottery__NotEnoughTimeHasPassed");
         })
         it("reverts with custom error Lottery__NotEnoughPlayers if enoughTimeHasPassed but !hasEnoughPlayers (easy)", async () => {
-            await (() => {
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, Number(deployInfos.upKeepInterval) * 1000 + 1000); // Enough time has passed ✅
-                })
-            })();
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ]);
             await expect(lottery.performUpkeep("0x00")).to.be.revertedWithCustomError(lottery, "Lottery__NotEnoughPlayers");
         })
         it("reverts with custom error Lottery__NotEnoughPlayers if enoughTimeHasPassed but !hasEnoughPlayers (extreme)", async () => {
-            await (() => {
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, Number(deployInfos.upKeepInterval) * 1000 + 1000); // Enough time has passed ✅
-                })
-            })();
-            let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ]);
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
             for (let i = 0; i < signers.length - 1 && i < minPlayers - 1n; i++) {
                 lotteryForPlayer = lottery.connect(signers[i + 1]);
@@ -382,6 +416,92 @@ describe("Lottery", () => {
             }
             await expect(lottery.performUpkeep("0x00")).to.be.revertedWithCustomError(lottery, "Lottery__NotEnoughPlayers");
         })
-        it("if (enoughTimeHasPassed && hasEnoughPlayers), emits the event UpKeepTriggered(uint128 roundNumber, uint256 timestamp), then emits the event RandomWordsRequested(bytes32 gasLane ,uint64 subscriptionId, uint16 MINIMUM_REQUEST_CONFIRMATIONS, uint32 callbackGasLimit, uint32 NUM_WORDS)");
+        it("if (enoughTimeHasPassed && hasEnoughPlayers), emits the event UpKeepTriggered(uint128 roundNumber, uint256 timestamp), then emits the event RandomWordsRequested(bytes32 gasLane ,uint64 subscriptionId, uint16 MINIMUM_REQUEST_CONFIRMATIONS, uint32 callbackGasLimit, uint32 NUM_WORDS)", async () => {
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ])
+            let min_players: bigint = await lottery.getMinimumNumberOfPlayers();
+            for (let i = 0; i < min_players; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            let roundNumber: bigint = await lottery.getRoundNumber();
+            let minRequestConfirm: bigint = await lottery.getMinumRequestConfirmations();
+            let numWords: bigint = await lottery.getNumberOfWords();
+            
+            await expect(lottery.performUpkeep("0x00"))
+            .to.emit(lottery, "UpKeepTriggered").withArgs(roundNumber, anyValue)
+            .to.emit(lottery, "RandomWordsRequested").withArgs(
+                anyValue,
+                deployInfos.vrfSubscriptionId,
+                minRequestConfirm,
+                deployInfos.callbackGasLimit,
+                numWords
+            );
+        });
+
+
+    })
+
+    describe("fulfillRandomWords() in Lottery", () =>{
+        // We can't call fulfillRandomWords() in Lottery directly cause it's internal, we have to call via fulfillRandomWords() in VRFCoordinatorV2, then VRFCoordinatorV2 calls fulfillRandomWords() in Lottery
+        let requestId: bigint;
+
+        beforeEach(async () => {
+            let minRequestConfirm: bigint = await lottery.getMinumRequestConfirmations();
+            let numWords: bigint = await lottery.getNumberOfWords();
+            await lottery.requestRandomWords();
+            requestId = await lottery.getRequestId();
+            let maxPlayers: bigint = await lottery.getNumberOfPlayers();
+            for (let i = 0; i < maxPlayers; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+        })
+        it("emits the event RandomWordsFulfilled(requestId, randomWords)", async () => {
+            await expect(vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string))
+            .to.emit(lottery, "RandomWordsFulfilled").withArgs(requestId, anyValue);
+        })
+        it("receives a not-empty array of generated random words from VRFCoordinatorV2", async () => {
+            await expect(vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string))
+            .to.not.be.revertedWithPanic();
+        })
+        it("call findAndAwardWinner() to award the winners", async () => {
+            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
+            for (let i = 0; i < maxPlayers; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            let contractBalanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
+            let winnerBalanceBefore: bigint = await ethers.provider.getBalance(signers[1].address as string);
+            let txResponse = await vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string);
+            let txReceipt = await txResponse.wait();
+            let txFee: bigint = txReceipt?.fee as bigint;
+            let contractBalanceAfter: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
+            let winnerBalanceAfter: bigint = await ethers.provider.getBalance(signers[1].address as string);
+            assert.equal(contractBalanceBefore + winnerBalanceBefore, contractBalanceAfter + winnerBalanceAfter - txFee);
+        })
+        it("reset s_players, s_randomWords, updates s_lastTimeStamp, and increment s_roundNumber", async () => {
+            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
+            for (let i = 0; i < maxPlayers; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            let lastTimestampBefore: bigint = await lottery.getLastTimeStamp();
+            let roundNumberBefore: bigint = await lottery.getRoundNumber();
+            await vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string);
+            let roundNumberAfter: bigint = await lottery.getRoundNumber();
+            let lastTimestampAfter: bigint = await lottery.getLastTimeStamp();
+            let players: string[] = await lottery.getPlayers();
+            let randomWords: bigint[] = await lottery.getRandomWords();
+
+            assert.notEqual(lastTimestampBefore, lastTimestampAfter);
+            assert.equal(roundNumberBefore + 1n, roundNumberAfter);
+            assert.equal(randomWords.length, 0);
+            assert.equal(players.length, 0);
+        })
+        it("emits the event LotteryRoundEnded(uint128 s_roundNumber, uint128 s_lastTimeStamp), then emits the event LotteryRoundStarted(uint128 s_roundNumber, uint256 timestamp)", async () => {
+            await expect(vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string))
+            .to.emit(lottery, "LotteryRoundEnded").withArgs(1, anyValue)
+            .to.emit(lottery, "LotteryRoundStarted").withArgs(2, anyValue);            
+        })
     })
 })
