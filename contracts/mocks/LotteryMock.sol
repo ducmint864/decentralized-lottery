@@ -202,6 +202,16 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return s_players[index];
     }
 
+    // Note: mock contract only
+    function getPlayers() external view returns(address[] memory) {
+        uint length = s_players.length;
+        address[] memory players = new address[](length);
+        for (uint i = 0; i < length; i++) {
+            players[i] = s_players[i];
+        }
+        return players;
+    }
+
     function getMaximumNumberOfPlayers() external pure returns (uint8) {
         return MAXIMUM_NUMBER_OF_PLAYERS;
     }
@@ -377,7 +387,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_players = new address[](0);
     }
 
-    // Note: this function number is only available in the mock contract
+    // Note: this function is only available in the mock contract
     function testWordsToIndexes(
         uint256[] memory words,
         uint8 digits
@@ -386,7 +396,18 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return words;
     }
 
+    // Note: mock contract only
     function getBlockTimestamp() external view returns (uint256) {
         return block.timestamp;
+    }
+
+    // Note: mock contract only
+    function testFindAndAwardWinner(        
+        uint8 prizeRanking,
+        uint256 index,
+        uint256 amount
+    ) external {
+        address[] memory players = s_players;
+        findAndAwardWinner(prizeRanking, players, index, amount);
     }
 }
