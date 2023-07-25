@@ -190,6 +190,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function join() external payable allowedToJoin {
         s_players.push(msg.sender);
+        emit PlayerJoined(msg.sender);
     }
 
     function fund() public payable {
