@@ -37,6 +37,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         noColors: true,
         currency: 'USD',
+        outputFile: "./artifacts/latest-gas-report",
         coinmarketcap: COINMARKETCAP_API_KEY
     },
 };
