@@ -357,6 +357,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_lastTimeStamp = block.timestamp;
         emit LotteryRoundEnded(s_roundNumber, s_lastTimeStamp);
         s_roundNumber++;
+        emit LotteryRoundStarted(s_roundNumber, s_lastTimeStamp);
     }
 
     //Note: This function is intended to by used by the owner only, it will immediately end the lottery and refund the remaining balance to the owner
