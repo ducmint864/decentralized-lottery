@@ -410,4 +410,9 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         address[] memory players = s_players;
         findAndAwardWinner(prizeRanking, players, index, amount);
     }
+    
+    // Note: mock contract only
+    function getRandomWords() external view returns(uint256[] memory) {
+        return s_randomWords;
+    }
 }
