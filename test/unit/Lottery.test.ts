@@ -53,14 +53,14 @@ describe("Lottery", () => {
 
     describe("fund()", () => {
         it("updates the correct amount of Eth funded", async () => {
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             await expect(lottery.fund({
                 value: amount,
             }))
             .to.changeEtherBalances([owner.address, deployInfos.lotteryAddress], [-amount, amount]);
         })
         it("emits a LotteryFunded(address funder, uin256 amount) event", async () => {
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             await expect(lottery.fund({value: amount}))
             .to.emit(lottery, "LotteryFunded").withArgs(owner.address, amount);
         }); 
@@ -69,7 +69,7 @@ describe("Lottery", () => {
     describe("fallback()", () => {
         it("calls fund() & updates the correct amount of Eth funded when someone transfer some Eth to the contract along with some msg.data", async () => {
             const selector: string = "0x080604";
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             const balanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             await owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
@@ -80,7 +80,7 @@ describe("Lottery", () => {
             assert.equal(balanceBefore + amount, balanceAfter);
         })
         it("emits the event LotteryFunded(address funder, uint256 amount)", async () => {
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             await expect(owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
                 value: amount
@@ -91,7 +91,7 @@ describe("Lottery", () => {
 
     describe("receive()", () => {
         it("call fund() & update the correct amount of Eth funded when someone transfer Eth to the contract with no transfer data", async () => {
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             const balanceBefore: bigint = await ethers.provider.getBalance(deployInfos.lotteryAddress as string);
             await owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
@@ -101,7 +101,7 @@ describe("Lottery", () => {
             assert.equal(balanceBefore + amount, balanceAfter);
         })
         it("emits the event LotteryFunded(address funder, uint256 amount)", async () => {
-            let amount: bigint = deployInfos.prize + ethers.parseEther("1");
+            let amount: bigint = deployInfos.prize + deployInfos.ensure;
             await expect(owner.sendTransaction({
                 to: deployInfos.lotteryAddress,
                 value: amount
@@ -116,23 +116,23 @@ describe("Lottery", () => {
             .to.be.revertedWithCustomError(lotteryForPlayer, "Lottery__NotEnoughFund");
         })
         it("doesn't allow the owner to join", async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
             await expect(lottery.join({ value: deployInfos.joinFee }))
             .to.be.revertedWithCustomError(lottery, "Lottery__NotAllowOwnerToJoin");
         });
         it("doesn't let a person join if they don't pay enough join fee", async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
             await expect(lotteryForPlayer.join({ value: 0n }))
             .to.be.revertedWithCustomError(lotteryForPlayer, "Lottery__NotEnoughFee");
         })
         it("doesn't let a person join if they pay just 1 wei less than join fee (extreme)", async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
             await expect(lotteryForPlayer.join({ value: deployInfos.joinFee - 1n }))
             .to.be.revertedWithCustomError(lotteryForPlayer, "Lottery__NotEnoughFee");
         })
         it("doesn't let a person join if lottery is full", async () => {
             let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
             for (let i = 0; i <= maxPlayers - 1n; i++) {
                 await lotteryForPlayer.join({value: deployInfos.joinFee});
             }
@@ -140,7 +140,7 @@ describe("Lottery", () => {
             .to.be.revertedWithCustomError(lotteryForPlayer, "Lottery__TooManyPlayers");
         })
         it("emits the event PlayerJoined(address player) whenever someone joins the lottery", async () => {
-            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
             for (let i = 0; i < minPlayers - 1n; i++) {
                 lotteryForPlayer = lottery.connect(signers[i + 1]);
@@ -152,7 +152,7 @@ describe("Lottery", () => {
 
     describe("getPlayer()", () => {
         it("returns the correct address of a player at given index", async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
             let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
             let i: number
@@ -305,7 +305,7 @@ describe("Lottery", () => {
         let winner: string;
         
         beforeEach(async () => {
-            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             maxPlayers = await lottery.getMaximumNumberOfPlayers();
             for (let i = 0; i < maxPlayers; i++)    {
                 await lotteryForPlayer.join({value: deployInfos.joinFee});
@@ -313,7 +313,7 @@ describe("Lottery", () => {
         })
         it("if winner isn't found, emits the event PrizeDismissed(uint8 prizeRanking)", async () => {
             prizeRanking = 1n;
-            amount = deployInfos.prize + ethers.parseEther("1");
+            amount = deployInfos.prize + deployInfos.ensure;
             index = maxPlayers;
             await expect(lottery.testFindAndAwardWinner(prizeRanking, index, amount))
             .to.emit(lottery, "PrizeDismissed").withArgs(prizeRanking);
@@ -345,7 +345,7 @@ describe("Lottery", () => {
 
     describe("checkUpKeep()", () => {
         beforeEach(async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") }); // hasEnoughFund ✅
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure }); // hasEnoughFund ✅
         })
         it("returns false when hasEnoughPlayers but !enoughTimeHasPassed", async () => {
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
@@ -405,7 +405,7 @@ describe("Lottery", () => {
 
     describe("performUpkeep()", () => {
         beforeEach(async () => {
-            await lottery.fund({ value: deployInfos.prize + ethers.parseEther("1") });
+            await lottery.fund({ value: deployInfos.prize + deployInfos.ensure });
         })
         it("reverts with custom error Lottery__NotEnoughTimeHasPassed if hasEnoughPlayers but !enoughTimeHasPassed (easy)", async () => {
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
@@ -504,7 +504,7 @@ describe("Lottery", () => {
             .to.not.be.revertedWithPanic();
         })
         it("call findAndAwardWinner() to award the winners", async () => {
-            // await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            // await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             // let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
             // for (let i = 0; i < maxPlayers; i++) {
             //     await lotteryForPlayer.join({value: deployInfos.joinFee});
@@ -519,7 +519,7 @@ describe("Lottery", () => {
             // assert.equal(contractBalanceBefore + winnerBalanceBefore, contractBalanceAfter + winnerBalanceAfter - txFee);
         })
         it("reset s_players, s_randomWords, updates s_lastTimeStamp, and increment s_roundNumber", async () => {
-            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
             for (let i = 0; i < maxPlayers; i++) {
                 await lotteryForPlayer.join({value: deployInfos.joinFee});
@@ -551,7 +551,7 @@ describe("Lottery", () => {
             let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
             let minPlayers: bigint = await lottery.getMinimumNumberOfPlayers();
             let i = 0;
-            await lottery.fund({value: deployInfos.prize + ethers.parseEther("1")});
+            await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             for (i = 0; i < maxPlayers && i < signers.length - 1; i++) {
                 lotteryForPlayer = lottery.connect(signers[i + 1]);
                 await lotteryForPlayer.join({value: deployInfos.joinFee});
@@ -563,7 +563,8 @@ describe("Lottery", () => {
             }
 
             // intense: emulate Chainlink keeper
-            network.provider.send("evm_increaseTime", [Number(deployInfos) + 1]);
+            await network.provider.send("evm_increaseTime", [Number(deployInfos.upKeepInterval) + 1]);
+            await network.provider.send("evm_mine", []);
             while (true) {
                 let upKeepNeeded: boolean;
                 [upKeepNeeded,] = await lottery.checkUpkeep("0x00") as [boolean, string];
