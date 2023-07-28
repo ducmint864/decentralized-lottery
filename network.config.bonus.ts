@@ -46,14 +46,14 @@ export const networkConfig = {
         NAME: "polygon_mumbai_testnet",
         VRF_COORDINATOR_ADDRESS: "0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed" as string,
         VRF_GAS_LANE: "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f" as string,
-        // VRF_SUBSCRIPTION_ID: as bigint,
+        VRF_SUBSCRIPTION_ID: 5555n as bigint,
         LINK_ADDRESS: "0x326C977E6efc84E512bB9C30f76E30c160eD06FB" as string,
         PRIZE: ethers.parseEther("0.01") as bigint,
         ENSURE: ethers.parseEther("1") as bigint,
         JOIN_FEE: ethers.parseEther("0") as bigint,
         CALL_BACK_GAS_LIMIT: BigInt(2500000) as bigint,
         UP_KEEP_INTERVAL: 60n as bigint,
-        // LOTTERY_ADDRESS: 
+        LOTTERY_ADDRESS: "0xF6457501f3f95106aCfB293f67a7dbE7B0BAb996" as string,
     }
 }
 
