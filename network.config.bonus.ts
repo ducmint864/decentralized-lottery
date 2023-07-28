@@ -34,7 +34,7 @@ export const networkConfig = {
         VRF_SUBSCRIPTION_ID: 3813n as bigint,
         LINK_ADDRESS: "0x779877A7B0D9E8603169DdbD7836e478b4624789" as string,
         PRIZE: ethers.parseEther("0.01") as bigint, // 0.1 Eth
-        JOIN_FEE: ethers.parseEther("0.003") as bigint, // 0.03 Eth
+        JOIN_FEE: ethers.parseEther("0") as bigint, // 0.03 Eth
         CALL_BACK_GAS_LIMIT: BigInt(2500000) as bigint,
         UP_KEEP_INTERVAL: 6n as bigint,
         LOTTERY_ADDRESS: "0x42Be0470309EE7bDD338187E100053f413d00600" as string
