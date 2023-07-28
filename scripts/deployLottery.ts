@@ -7,11 +7,15 @@ import deployVRFCoordinatorV2Mock from "./mocks/deployVRFCoordinatorV2Mock"
 
 async function deployLottery(verbose: boolean = true) {
     try {
-        /**0. Arrange */
+        /**
+         * @dev 0. Arrange
+        */
         const CHAIN_ID: number = (network.config.chainId as number) ?? process.env.DEFAULT_CHAIN_ID;
         const IS_DEVELOPMENT_CHAIN: boolean = developmentChainIds.includes(CHAIN_ID);
 
-        /**1. Print network infos*/
+        /**
+         * @dev 1. Print network infos
+        */
         if (verbose) {
             console.log("---------------------------- Contract deployment script ----------------------------\n");
             console.log("--> Network: {\n\tName: ", networkConfig[CHAIN_ID as keyof typeof networkConfig].NAME);
@@ -19,7 +23,9 @@ async function deployLottery(verbose: boolean = true) {
             console.log("}");
         }
 
-        /**2. Extract network-dependent deploy parameters from networkConfig*/
+        /**
+         * @dev 2. Extract network-dependent deploy parameters from networkConfig
+        */
         let deployInfos: DeployInfos = {
             chainId: CHAIN_ID,
             isDevelopmentChain: IS_DEVELOPMENT_CHAIN,
@@ -52,11 +58,15 @@ async function deployLottery(verbose: boolean = true) {
             })() as string,
 
             // We don't initialize lotteryAddress property because we haven't deployed the Lottery(Mock) contract
+            lotteryAddress: networkConfig[CHAIN_ID as keyof typeof networkConfig].LOTTERY_ADDRESS as string
         }
 
-        /**3. If on a local blockchain, subscribe to VRFCoordinatorV2Mock to get the subscriptionId */
+        /**
+         * @dev 3. If on a local blockchain, subscribe to VRFCoordinatorV2Mock to get the subscriptionId
+         */
+
         if (deployInfos.isDevelopmentChain) {
-            let vrfCoordinatorV2Mock : VRFCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", deployInfos.vrfCoordinatorV2Address);
+            let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", deployInfos.vrfCoordinatorV2Address);
             await vrfCoordinatorV2Mock.createSubscription();
             let subscriptionId: bigint = await vrfCoordinatorV2Mock.getCurrentSubId();
             deployInfos.vrfSubscriptionId = subscriptionId;
@@ -64,51 +74,65 @@ async function deployLottery(verbose: boolean = true) {
         }
 
 
-        /**4. Deploy Lottery/LotteryMock contract*/
-        let lotteryFactory = await ethers.getContractFactory(deployInfos.isDevelopmentChain ? "LotteryMock" : "Lottery");
-        let lottery = await lotteryFactory.deploy(
-            // pass in Lottery(Mock)'s constructor params
-            deployInfos.prize,                      // i_prize
-            deployInfos.joinFee,                    // i_joinFee
-            deployInfos.vrfCoordinatorV2Address,    // i_vrfCoordinatorV2Address
-            deployInfos.vrfGasLane,                 // i_gasLane
-            deployInfos.vrfSubscriptionId,          // i_subscriptionId
-            deployInfos.callbackGasLimit,           // i_callBackGasLimit
-            deployInfos.upKeepInterval,             // i_upKeepInterval
+        /**
+         * @dev 4. Deploy Lottery/LotteryMock contract depending on network
+         * @dev If we've already deployed Lottery to a testnet/mainnet, we won't have to deploy it again
+         */
+        if (deployInfos.lotteryAddress == "") {
+            let lotteryFactory = await ethers.getContractFactory(deployInfos.isDevelopmentChain ? "LotteryMock" : "Lottery");
+            let lottery = await lotteryFactory.deploy(
+                // pass in Lottery(Mock)'s constructor params
+                deployInfos.prize,                      // i_prize
+                deployInfos.joinFee,                    // i_joinFee
+                deployInfos.vrfCoordinatorV2Address,    // i_vrfCoordinatorV2Address
+                deployInfos.vrfGasLane,                 // i_gasLane
+                deployInfos.vrfSubscriptionId,          // i_subscriptionId
+                deployInfos.callbackGasLimit,           // i_callBackGasLimit
+                deployInfos.upKeepInterval,             // i_upKeepInterval
 
-            // overrides
-            {
-                value: deployInfos.isDevelopmentChain ? 0n : deployInfos.prize + ethers.parseEther("1")
+                // overrides
+                {
+                    // value: deployInfos.isDevelopmentChain ? 0n : deployInfos.prize + ethers.parseEther("1")
+                    value: 0n
+                }
+            )
+            await lottery.waitForDeployment();
+            deployInfos.lotteryAddress = await lottery.getAddress();
+            if (verbose) {
+                console.log(
+                    (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
+                );
             }
-        )
-        await lottery.waitForDeployment();
-        deployInfos.lotteryAddress = await lottery.getAddress();
+        }
+        else {
+            console.log(verbose ? `Acquired Lottery contract from address ${deployInfos.lotteryAddress}` : "");
+        }
 
-        /**5. If on a local blockchain, add LotteryMock as a new consumer of VRFCoordinatorV2Mock */
+        /**
+         * @dev 5. If on a local blockchain, we have an additional step,
+         * @dev that is to add LotteryMock as a new consumer of VRFCoordinatorV2Mock
+        */
         if (deployInfos.isDevelopmentChain) {
             let vrfCooridnatorV2Mock: VRFCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", deployInfos.vrfCoordinatorV2Address);
-            await vrfCooridnatorV2Mock.addConsumer(deployInfos.vrfSubscriptionId, deployInfos.lotteryAddress);
+            await vrfCooridnatorV2Mock.addConsumer(deployInfos.vrfSubscriptionId as bigint, deployInfos.lotteryAddress as string);
             console.log(verbose ? `Added consumer to VRFCoordinatorV2Mock: {\n\tSubscription ID: ${deployInfos.vrfSubscriptionId}\n\tConsumer: ${deployInfos.lotteryAddress}\n}` : "");
         }
 
-        /**6. Finished, now printing Lottery contracts' infos */
-        if (verbose) {
-            console.log(
-                (IS_DEVELOPMENT_CHAIN ? "LotteryMock" : "Lottery") + ` contract has been deployed to address ${deployInfos.lotteryAddress}`
-            );
-            console.log("------------------------------------------------------------------------------------");
-        }
+        /**
+         * @dev Finished
+        */
+        console.log("------------------------------------------------------------------------------------");
         return deployInfos;
 
     } catch (err: any) {
         console.log(err);
-        throw new Error("->Failed to deploy Lottery contract.");
+        throw new Error("-> Failed to deploy Lottery contract.");
     }
 }
 
-// // Invoke deployLottery() with default parameters
-// deployLottery().catch((err: any) => {
-//     console.log(err);
-// })
+// Invoke deployLottery() with default parameters
+deployLottery().catch((err: any) => {
+    console.log(err);
+})
 
 export default deployLottery;
