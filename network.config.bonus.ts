@@ -36,7 +36,7 @@ export const networkConfig = {
         VRF_SUBSCRIPTION_ID: 3813n as bigint,
         LINK_ADDRESS: "0x779877A7B0D9E8603169DdbD7836e478b4624789" as string,
         PRIZE: ethers.parseEther("0.01") as bigint, // 0.1 Eth
-        ENSURE: ethers.parseEther("1") as bigint,
+        ENSURE: ethers.parseEther("0.1") as bigint,
         JOIN_FEE: ethers.parseEther("0") as bigint, // 0.03 Eth
         CALL_BACK_GAS_LIMIT: BigInt(2500000) as bigint,
         UP_KEEP_INTERVAL: 60n as bigint,
@@ -49,7 +49,7 @@ export const networkConfig = {
         VRF_SUBSCRIPTION_ID: 5555n as bigint,
         LINK_ADDRESS: "0x326C977E6efc84E512bB9C30f76E30c160eD06FB" as string,
         PRIZE: ethers.parseEther("0.01") as bigint,
-        ENSURE: ethers.parseEther("1") as bigint,
+        ENSURE: ethers.parseEther("0.1") as bigint,
         JOIN_FEE: ethers.parseEther("0") as bigint,
         CALL_BACK_GAS_LIMIT: BigInt(2500000) as bigint,
         UP_KEEP_INTERVAL: 60n as bigint,
