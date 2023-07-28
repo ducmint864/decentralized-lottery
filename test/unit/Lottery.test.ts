@@ -471,8 +471,42 @@ describe("Lottery", () => {
                 numWords
             );
         });
+        it("if (enoughTimeHasPassed && hasEnoughPlayers) && !s_pendingRequest, it request for random words and emits the event RandomWordsRequested(...)", async () => {
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ])
+            await network.provider.send("evm_mine", []);
+            let min_players: bigint = await lottery.getMinimumNumberOfPlayers();
+            for (let i = 0; i < min_players; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            await expect(lottery.performUpkeep("0x00"))
+            .to.emit(
+                lottery,
+                "RandomWordsRequested"
+            );
+            let latestRequestId: bigint = await vrfCoordinatorV2.getCurrentRequestId();
+            assert(await lottery.getRequestId(), latestRequestId);
+        })
+        it("if (enoughTimeHasPassed && hasEnoughPlayers) but s_pendingRequest, it doesn't emit anything after emitting UpKeepTriggered()", async () => {
+            await network.provider.send("evm_increaseTime", [
+                Number(deployInfos.upKeepInterval) + 1
+            ])
+            await network.provider.send("evm_mine", []);
+            let min_players: bigint = await lottery.getMinimumNumberOfPlayers();
+            for (let i = 0; i < min_players; i++) {
+                await lotteryForPlayer.join({value: deployInfos.joinFee});
+            }
+            
+            // intentional fake request to set s_pendingRequest to true for testing
+            await lottery.requestRandomWords();
 
-
+            await expect(lottery.performUpkeep("0x00"))
+            .to.not.emit(
+                lottery,
+                "RandomWordsRequested"
+            );
+        })
     })
 
     describe("fulfillRandomWords() in Lottery", () =>{
@@ -518,7 +552,7 @@ describe("Lottery", () => {
             // let winnerBalanceAfter: bigint = await ethers.provider.getBalance(signers[1].address as string);
             // assert.equal(contractBalanceBefore + winnerBalanceBefore, contractBalanceAfter + winnerBalanceAfter - txFee);
         })
-        it("reset s_players, s_randomWords, updates s_lastTimeStamp, and increment s_roundNumber", async () => {
+        it("reset s_players, s_randomWords, updates s_lastTimeStamp, increment s_roundNumber, and set s_pendingRequest to false", async () => {
             await lottery.fund({value: deployInfos.prize + deployInfos.ensure});
             let maxPlayers: bigint = await lottery.getMaximumNumberOfPlayers();
             for (let i = 0; i < maxPlayers; i++) {
@@ -536,6 +570,7 @@ describe("Lottery", () => {
             assert.equal(roundNumberBefore + 1n, roundNumberAfter);
             assert.equal(randomWords.length, 0);
             assert.equal(players.length, 0);
+            assert.equal(await lottery.getPendingRequest(), false);
         })
         it("emits the event LotteryRoundEnded(uint128 s_roundNumber, uint128 s_lastTimeStamp), then emits the event LotteryRoundStarted(uint128 s_roundNumber, uint256 timestamp)", async () => {
             await expect(vrfCoordinatorV2.fulfillRandomWords(requestId, deployInfos.lotteryAddress as string))
