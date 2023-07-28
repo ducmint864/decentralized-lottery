@@ -20,6 +20,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /**State variables */
     // Lottery variables
     uint256 private immutable i_prize; // approx. 1000 Eth = $... Old value: 1000000000000000000000
+    uint256 private immutable i_ensure;
     address private immutable i_owner;
     uint256 private immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address[] private s_players;
@@ -87,6 +88,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
     //Note: On deployment, the contract can have balance = 0. But it won't allow any player to join untill it has been funded with i_prize amount
     constructor(
         uint256 _prize,
+        uint256 _ensure,
         uint256 _joinFee,
         address _vrfCoordinatorV2MockAddress,
         bytes32 _gasLane,
@@ -98,6 +100,7 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
         emit LotteryRoundStarted(s_roundNumber, s_lastTimeStamp);
         i_owner = msg.sender;
         i_prize = _prize;
+        i_ensure = _ensure;
         i_joinFee = _joinFee;
         i_gasLane = _gasLane;
         i_subscriptionId = _subscriptionId;
@@ -235,6 +238,10 @@ contract LotteryMock is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function getPrize() external view returns (uint256) {
         return i_prize;
+    }
+
+    function getEnsure() external view returns (uint256) {
+        return i_ensure;
     }
 
     function getJoinFee() external view returns (uint256) {

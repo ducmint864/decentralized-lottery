@@ -32,6 +32,7 @@ async function deployLottery(verbose: boolean = true) {
             vrfSubscriptionId: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_SUBSCRIPTION_ID as bigint,
             vrfGasLane: networkConfig[CHAIN_ID as keyof typeof networkConfig].VRF_GAS_LANE as string,
             prize: networkConfig[CHAIN_ID as keyof typeof networkConfig].PRIZE as bigint,
+            ensure: networkConfig[CHAIN_ID as keyof typeof networkConfig].ENSURE as bigint,
             joinFee: networkConfig[CHAIN_ID as keyof typeof networkConfig].JOIN_FEE as bigint,
             callbackGasLimit: networkConfig[CHAIN_ID as keyof typeof networkConfig].CALL_BACK_GAS_LIMIT as bigint,
             upKeepInterval: networkConfig[CHAIN_ID as keyof typeof networkConfig].UP_KEEP_INTERVAL as bigint,
@@ -83,6 +84,7 @@ async function deployLottery(verbose: boolean = true) {
             let lottery = await lotteryFactory.deploy(
                 // pass in Lottery(Mock)'s constructor params
                 deployInfos.prize,                      // i_prize
+                deployInfos.ensure,                     // i_ensure
                 deployInfos.joinFee,                    // i_joinFee
                 deployInfos.vrfCoordinatorV2Address,    // i_vrfCoordinatorV2Address
                 deployInfos.vrfGasLane,                 // i_gasLane
@@ -121,7 +123,7 @@ async function deployLottery(verbose: boolean = true) {
         /**
          * @dev Finished
         */
-        console.log("------------------------------------------------------------------------------------");
+        console.log(verbose ? "------------------------------------------------------------------------------------" : "");
         return deployInfos;
 
     } catch (err: any) {

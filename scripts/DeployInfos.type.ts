@@ -5,6 +5,7 @@ export default interface DeployInfos {
     vrfSubscriptionId: bigint;
     vrfGasLane: string;
     prize:  bigint;
+    ensure: bigint;
     joinFee: bigint;
     callbackGasLimit: bigint;
     upKeepInterval: bigint;
