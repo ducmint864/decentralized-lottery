@@ -63,8 +63,8 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     modifier allowedToJoin() {
         if (msg.sender == i_owner) revert Lottery__NotAllowOwnerToJoin();
         if (msg.value < i_joinFee) revert Lottery__NotEnoughFee(); // Note: To ensure fairness for the players, no players is allowed to join until the owner of this contract has funded enough i_prize amount;
-        if (address(this).balance < (i_prize + 1 ether))
-            revert Lottery__NotEnoughFund(); // Note: Why "+ 1 ether"? Because the contract enforce the fund to exceed i_prize by 1 Ether in to compensate for the txFees when transferring Eth to the winners. Ưhen the Lottery's closed, the remaining balance will be refunded to the owner.
+        if (address(this).balance < (i_prize + i_ensure))
+            revert Lottery__NotEnoughFund(); // Note: Why "+ i_ensure"? Because the contract enforce the fund to exceed i_prize by 1 Ether in to compensate for the txFees when transferring Eth to the winners. Ưhen the Lottery's closed, the remaining balance will be refunded to the owner.
         if (getNumberOfPlayers() >= MAXIMUM_NUMBER_OF_PLAYERS)
             revert Lottery__TooManyPlayers();
         _;
