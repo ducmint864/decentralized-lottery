@@ -497,10 +497,13 @@ describe("Lottery", () => {
             for (let i = 0; i < min_players; i++) {
                 await lotteryForPlayer.join({value: deployInfos.joinFee});
             }
-            
-            // intentional fake request to set s_pendingRequest to true for testing
-            await lottery.requestRandomWords();
 
+            // intentional fake requests to set s_pendingRequest to true for testing
+            for (let i = 0; i < 10; i++) {
+                await lottery.requestRandomWords();
+            }
+
+            assert(await lottery.getPendingRequest(), true);
             await expect(lottery.performUpkeep("0x00"))
             .to.not.emit(
                 lottery,
@@ -564,12 +567,15 @@ describe("Lottery", () => {
             let roundNumberAfter: bigint = await lottery.getRoundNumber();
             let lastTimestampAfter: bigint = await lottery.getLastTimeStamp();
             let players: string[] = await lottery.getPlayers();
+            let playersCount: bigint = await lottery.getNumberOfPlayers();
             let randomWords: bigint[] = await lottery.getRandomWords();
 
             assert.notEqual(lastTimestampBefore, lastTimestampAfter);
             assert.equal(roundNumberBefore + 1n, roundNumberAfter);
             assert.equal(randomWords.length, 0);
             assert.equal(players.length, 0);
+            assert.equal(playersCount, 0n);
+            await expect(lottery.getPlayer(0n)).to.be.revertedWithPanic;
             assert.equal(await lottery.getPendingRequest(), false);
         })
         it("emits the event LotteryRoundEnded(uint128 s_roundNumber, uint128 s_lastTimeStamp), then emits the event LotteryRoundStarted(uint128 s_roundNumber, uint256 timestamp)", async () => {
