@@ -376,7 +376,7 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface {
     }
 
     function getCurrentRequestId() external view override returns (uint256) {
-        return s_nextRequestId;
+        return s_nextRequestId - 1;
     }
 
     function getConsumer(
