@@ -314,7 +314,8 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         findAndAwardWinner(3, players, randomWords[2], (i_prize * 1) / 10);
 
         // Clean up and prepare for new round
-        s_players = new address[](0);
+        // s_players = new address[](0);
+        delete s_players;
         s_lastTimeStamp = block.timestamp;
         emit LotteryRoundEnded(s_roundNumber, s_lastTimeStamp);
         s_roundNumber++;
