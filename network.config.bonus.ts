@@ -53,7 +53,7 @@ export const networkConfig = {
         JOIN_FEE: ethers.parseEther("0") as bigint,
         CALL_BACK_GAS_LIMIT: BigInt(2500000) as bigint,
         UP_KEEP_INTERVAL: 60n as bigint,
-        LOTTERY_ADDRESS: "0xF794747DD084fD394EAE793D54C663A494E129C2" as string,
+        LOTTERY_ADDRESS: "0x580E560C070376354e5985ECF7239EEcDb546a64" as string,
     }
 }
 
