@@ -13,6 +13,12 @@ artifacts
 scripts/test.ts
 contracts/Test.sol
 
+# foundry files
+lib/
+foundry-out/
+forge-cache/
+mappings.txt
+
 # Other files
 todo.txt
 .solhint.json

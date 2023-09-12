@@ -1,0 +1,9 @@
+[profile.default]
+src = "contracts"
+out = "foundry-out"
+libs = ["lib", "node_modules"]
+test = "test/foundry"
+cache_path = "forge-cache"
+solc = "0.8.19"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
