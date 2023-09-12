@@ -13,7 +13,7 @@ const COINMARKETCAP_API_KEY: string = process.env.COINMARKETCAP_API_KEY ?? "";
 const POLYGON_MUMBAI_RPC_URL: string = process.env.POLYGON_MUMBAI_RPC_URL ?? "";
 
 const config: HardhatUserConfig = {
-    solidity: "0.8.18",
+    solidity: "0.8.19",
     defaultNetwork: "hardhat_localhost",
     networks: {
         sepolia_testnet: {
