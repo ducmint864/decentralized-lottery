@@ -249,7 +249,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     // Other functions
-    function countDigits(uint256 x) private pure returns (uint8) {
+    function countDigits(uint256 x) internal pure returns (uint8) {
         if (x < 10) return 1;
         uint8 c = 0;
         while (x > 0) {
@@ -262,7 +262,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function wordsToIndexes(
         uint256[] memory randomWords,
         uint8 digits
-    ) private pure returns (uint256[] memory) {
+    ) internal pure returns (uint256[] memory) {
         for (uint8 i = 0; i < randomWords.length; i++) {
             randomWords[i] = randomWords[i] % (10 ** digits);
         }
@@ -274,7 +274,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         address[] memory players,
         uint256 index,
         uint256 amount
-    ) private {
+    ) internal {
         if (index >= players.length) {
             // Player not found
             emit PrizeDismissed(prizeRanking);
