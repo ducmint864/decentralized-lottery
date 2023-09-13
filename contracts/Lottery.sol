@@ -23,23 +23,23 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint256 public immutable i_ensure;
     uint256 public immutable i_joinFee; // approx. 0.003 Eth = $5... Old value: 3000000000000000
     address public immutable i_owner;
-    address[] private s_players;
-    uint128 private s_roundNumber = 1;
-    uint8 private constant MINIMUM_NUMBER_OF_PLAYERS = 10;
-    uint8 private constant MAXIMUM_NUMBER_OF_PLAYERS = 30;
+    address[] internal s_players;
+    uint128 internal s_roundNumber = 1;
+    uint8 internal constant MINIMUM_NUMBER_OF_PLAYERS = 10;
+    uint8 internal constant MAXIMUM_NUMBER_OF_PLAYERS = 30;
 
     // Chainlink VRF variables
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2;
-    bytes32 private immutable i_gasLane; // keyHash
-    uint64 private immutable i_subscriptionId;
-    uint32 private immutable i_callbackGasLimit;
-    uint16 private constant MINIMUM_REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 3;
-    bool private s_pendingRequest;
+    VRFCoordinatorV2Interface internal immutable i_vrfCoordinatorV2;
+    bytes32 internal immutable i_gasLane; // keyHash
+    uint64 internal immutable i_subscriptionId;
+    uint32 internal immutable i_callbackGasLimit;
+    uint16 internal constant MINIMUM_REQUEST_CONFIRMATIONS = 3;
+    uint32 internal constant NUM_WORDS = 3;
+    bool internal s_pendingRequest;
 
     // Chainlink UpKeep variables
-    uint256 private s_lastTimeStamp;
-    uint256 private immutable i_upKeepInterval;
+    uint256 internal s_lastTimeStamp;
+    uint256 internal immutable i_upKeepInterval;
 
     /**Events */
     event LotteryFunded(address funder, uint256 amount); // emits whenever someone funds money into the lottery
